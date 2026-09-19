@@ -8,6 +8,8 @@ import { productService } from '@/services/productService';
 import { Product } from '@/types/product';
 import { ProductCard } from '@/components/product/ProductCard';
 import { ShirtLoader } from '@/components/ui/ShirtLoader';
+import { FragranceSection } from '@/components/fragrance/FragranceSection';
+import { FragranceTeaserCard } from '@/components/fragrance/FragranceTeaserCard';
 
 export default function HomePage() {
   const [pageLoading, setPageLoading] = useState(true);
@@ -81,18 +83,25 @@ export default function HomePage() {
                 Thoughtfully designed clothing for a life well lived. Crafted from natural fabrics in muted earth tones for India & international closets.
               </p>
 
-              <div className="pt-4 flex flex-col sm:flex-row gap-4">
+              <div className="pt-4 flex flex-col sm:flex-row flex-wrap gap-3">
                 <Link
                   href="/collections/men"
-                  className="bg-[#A85F43] hover:bg-[#C18A60] text-[#FFF9F1] text-xs font-semibold px-8 py-4 tracking-[0.15em] uppercase transition-colors text-center shadow-lg"
+                  className="bg-[#A85F43] hover:bg-[#C18A60] text-[#FFF9F1] text-xs font-semibold px-7 py-3.5 tracking-[0.15em] uppercase transition-colors text-center shadow-lg"
                 >
                   SHOP MEN
                 </Link>
                 <Link
                   href="/collections/women"
-                  className="bg-[#FFF9F1] hover:bg-[#F3E5D0] text-[#35251E] text-xs font-semibold px-8 py-4 tracking-[0.15em] uppercase transition-colors text-center shadow-lg"
+                  className="bg-[#FFF9F1] hover:bg-[#F3E5D0] text-[#35251E] text-xs font-semibold px-7 py-3.5 tracking-[0.15em] uppercase transition-colors text-center shadow-lg"
                 >
                   SHOP WOMEN
+                </Link>
+                <Link
+                  href="/fragrance"
+                  className="bg-[#2A1D18] hover:bg-[#A85F43] text-[#FFF9F1] border border-[#C18A60]/50 text-xs font-bold px-7 py-3.5 tracking-[0.15em] uppercase transition-colors text-center shadow-xl flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-[#C18A60]" />
+                  <span>EXPLORE FRAGRANCES</span>
                 </Link>
               </div>
             </div>
@@ -110,7 +119,7 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-6">
             
             {/* Men's Card */}
             <Link href="/collections/men" className="group relative aspect-[4/5] bg-[#F3E5D0] overflow-hidden border border-[#DDCBB7]">
@@ -120,7 +129,7 @@ export default function HomePage() {
                 fill
                 className="object-cover group-hover:scale-105 transition-transform duration-700"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#2A1D18]/80 via-black/20 to-transparent flex flex-col justify-end p-8 text-[#FFF9F1]">
+              <div className="absolute inset-0 bg-gradient-to-t from-[#2A1D18]/80 via-black/20 to-transparent flex flex-col justify-end p-6 text-[#FFF9F1]">
                 <span className="text-[10px] font-bold tracking-[0.25em] text-[#C18A60] uppercase mb-1">MENSWEAR</span>
                 <h3 className="font-serif text-2xl font-bold tracking-wider">MEN</h3>
                 <span className="text-xs font-semibold tracking-widest text-[#F3E5D0] mt-3 group-hover:text-[#C18A60] flex items-center gap-1">
@@ -138,11 +147,29 @@ export default function HomePage() {
                 fill
                 className="object-cover group-hover:scale-105 transition-transform duration-700"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#2A1D18]/80 via-black/20 to-transparent flex flex-col justify-end p-8 text-[#FFF9F1]">
+              <div className="absolute inset-0 bg-gradient-to-t from-[#2A1D18]/80 via-black/20 to-transparent flex flex-col justify-end p-6 text-[#FFF9F1]">
                 <span className="text-[10px] font-bold tracking-[0.25em] text-[#C18A60] uppercase mb-1">WOMENSWEAR</span>
                 <h3 className="font-serif text-2xl font-bold tracking-wider">WOMEN</h3>
                 <span className="text-xs font-semibold tracking-widest text-[#F3E5D0] mt-3 group-hover:text-[#C18A60] flex items-center gap-1">
                   <span>EXPLORE COLLECTION</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </span>
+              </div>
+            </Link>
+
+            {/* Fragrance Card */}
+            <Link href="/fragrance" className="group relative aspect-[4/5] bg-[#1C1412] overflow-hidden border border-[#C18A60]/50 shadow-xl">
+              <Image
+                src="https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?q=80&w=1000&auto=format&fit=crop"
+                alt="MUNAAZ Essence Fragrances"
+                fill
+                className="object-cover group-hover:scale-105 transition-transform duration-700 filter brightness-90"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#1C1412] via-black/30 to-transparent flex flex-col justify-end p-6 text-[#FFF9F1]">
+                <span className="text-[10px] font-bold tracking-[0.25em] text-[#C18A60] uppercase mb-1">EAU DE PARFUM</span>
+                <h3 className="font-serif text-2xl font-bold tracking-wider text-white">FRAGRANCE</h3>
+                <span className="text-xs font-semibold tracking-widest text-[#C18A60] mt-3 group-hover:text-white flex items-center gap-1">
+                  <span>ENTER ATELIER</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </span>
               </div>
@@ -156,7 +183,7 @@ export default function HomePage() {
                 fill
                 className="object-cover group-hover:scale-105 transition-transform duration-700"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#2A1D18]/80 via-black/20 to-transparent flex flex-col justify-end p-8 text-[#FFF9F1]">
+              <div className="absolute inset-0 bg-gradient-to-t from-[#2A1D18]/80 via-black/20 to-transparent flex flex-col justify-end p-6 text-[#FFF9F1]">
                 <span className="text-[10px] font-bold tracking-[0.25em] text-[#C18A60] uppercase mb-1">THE EDIT</span>
                 <h3 className="font-serif text-2xl font-bold tracking-wider">NEW ARRIVALS</h3>
                 <span className="text-xs font-semibold tracking-widest text-[#F3E5D0] mt-3 group-hover:text-[#C18A60] flex items-center gap-1">
@@ -195,6 +222,9 @@ export default function HomePage() {
             ))}
           </div>
         </section>
+
+        {/* E2. MUNAAZ ESSENCE LUXURY FRAGRANCE TEASER BANNER */}
+        <FragranceTeaserCard />
 
         {/* NEW FEATURE: INTERACTIVE SHIRT WEARING & FABRIC FIT ADVISOR */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

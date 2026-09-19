@@ -69,6 +69,14 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose, onO
               WOMEN
             </Link>
             <Link
+              href="/fragrance"
+              onClick={onClose}
+              className="block text-sm font-bold tracking-widest text-[#2A1D18] bg-[#F3E5D0] border border-[#C18A60]/40 p-3 rounded-none flex items-center justify-between"
+            >
+              <span>MUNAAZ ESSENCE FRAGRANCE</span>
+              <span className="text-[9px] bg-[#A85F43] text-white px-2 py-0.5 font-mono uppercase">EXPLORE</span>
+            </Link>
+            <Link
               href="/shop"
               onClick={onClose}
               className="block text-sm font-semibold tracking-widest text-[#35251E] hover:text-[#A85F43]"

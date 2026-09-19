@@ -39,6 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { name: 'NEW ARRIVALS', href: '/collections/new-arrivals' },
     { name: 'MEN', href: '/collections/men' },
     { name: 'WOMEN', href: '/collections/women' },
+    { name: 'FRAGRANCE', href: '/fragrance', isSpecial: true },
     {
       name: 'COLLECTIONS',
       href: '/shop',
@@ -47,6 +48,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         { name: 'The Linen Edit', href: '/collections/linen-edit' },
         { name: 'Earth Tones Edit', href: '/collections/earth-tones' },
         { name: 'Everyday Essentials', href: '/collections/everyday-essentials' },
+        { name: 'Munaaz Essence Fragrances', href: '/fragrance' },
       ]
     },
     { name: 'BEST SELLERS', href: '/collections/best-sellers' },
@@ -83,7 +85,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Desktop Navigation Left / Main */}
-          <nav className="hidden lg:flex items-center gap-8">
+          <nav className="hidden lg:flex items-center gap-4 xl:gap-6 flex-wrap">
             {navLinks.map((link) => (
               <div
                 key={link.name}
@@ -93,15 +95,22 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <Link
                   href={link.href}
-                  className={`text-xs font-semibold tracking-[0.15em] transition-colors flex items-center gap-1 ${
+                  className={`text-xs font-semibold tracking-[0.12em] transition-colors flex items-center gap-1 ${
                     pathname === link.href
                       ? 'text-[#A85F43] font-bold border-b border-[#A85F43]'
+                      : link.isSpecial
+                      ? 'text-[#2A1D18] hover:text-[#A85F43] bg-[#F3E5D0] border border-[#C18A60]/40 px-2 py-0.5 shadow-xs'
                       : link.isHighlight
                       ? 'text-[#A85F43] hover:text-[#806B5D]'
                       : 'text-[#35251E] hover:text-[#A85F43]'
                   }`}
                 >
                   {link.name}
+                  {link.isSpecial && (
+                    <span className="text-[8px] font-bold tracking-wider text-[#A85F43] bg-[#2A1D18] text-[#FFF9F1] px-1 py-0.2 uppercase">
+                      PARFUM
+                    </span>
+                  )}
                   {link.hasDropdown && <ChevronDown className="w-3 h-3" />}
                 </Link>
 
@@ -126,9 +135,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
 
           {/* Centered Brand Logo */}
-          <div className="text-center">
+          <div className="text-center px-4">
             <Link href="/" className="inline-block group">
-              <span className="font-serif text-2xl sm:text-3xl lg:text-4xl tracking-[0.25em] font-bold text-[#35251E] group-hover:text-[#A85F43] transition-colors">
+              <span className="font-serif text-2xl sm:text-3xl lg:text-3xl xl:text-4xl tracking-[0.25em] font-bold text-[#35251E] group-hover:text-[#A85F43] transition-colors">
                 {BRAND_CONFIG.name}
               </span>
               <span className="block text-[9px] tracking-[0.3em] uppercase text-[#806B5D] -mt-1 font-sans">
