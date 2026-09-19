@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface AnamorphicBokeh {
   x: number;
@@ -18,6 +18,26 @@ interface Fragrance3DOrbitingHeroProps {
   activeSceneId?: string;
   onOrbitChange?: (angleDeg: number) => void;
   className?: string;
+}
+
+interface Point3D {
+  x: number;
+  y: number;
+  z: number;
+}
+
+interface Project2D {
+  px: number;
+  py: number;
+  rz: number;
+  scale: number;
+}
+
+interface Face3D {
+  id: string;
+  points: Point3D[];
+  type: 'cap' | 'body-front' | 'body-back' | 'body-side' | 'body-top' | 'body-bottom' | 'neck';
+  normal?: Point3D;
 }
 
 export const Fragrance3DOrbitingHero: React.FC<Fragrance3DOrbitingHeroProps> = ({
@@ -81,6 +101,14 @@ export const Fragrance3DOrbitingHero: React.FC<Fragrance3DOrbitingHeroProps> = (
     };
   }, []);
 
+  const accentColorRef = useRef(accentColor);
+  const onOrbitChangeRef = useRef(onOrbitChange);
+
+  useEffect(() => {
+    accentColorRef.current = accentColor;
+    onOrbitChangeRef.current = onOrbitChange;
+  });
+
   // Continuous 360° Orbit & Anamorphic Canvas Engine
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -143,9 +171,9 @@ export const Fragrance3DOrbitingHero: React.FC<Fragrance3DOrbitingHeroProps> = (
       const angle = currentAngleRef.current;
       setOrbitAngle(angle);
 
-      if (onOrbitChange) {
+      if (onOrbitChangeRef.current) {
         const deg = Math.round((((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) * (180 / Math.PI));
-        onOrbitChange(deg);
+        onOrbitChangeRef.current(deg);
       }
 
       ctx.clearRect(0, 0, width, height);
@@ -158,13 +186,13 @@ export const Fragrance3DOrbitingHero: React.FC<Fragrance3DOrbitingHeroProps> = (
       ctx.translate(centerX, centerY);
 
       const ribbonPoints = 120;
-      const ribbonRadius = width < 768 ? 160 : 320;
+      const ribbonRadius = width < 768 ? 170 : 330;
 
       ctx.beginPath();
       for (let i = 0; i <= ribbonPoints; i++) {
         const theta = (i / ribbonPoints) * Math.PI * 2 + angle;
         const rx = Math.cos(theta) * ribbonRadius;
-        const ry = Math.sin(theta) * (ribbonRadius * 0.35) + Math.sin(theta * 2) * 20;
+        const ry = Math.sin(theta) * (ribbonRadius * 0.32) + Math.sin(theta * 2) * 18;
 
         if (i === 0) ctx.moveTo(rx, ry);
         else ctx.lineTo(rx, ry);
@@ -190,22 +218,24 @@ export const Fragrance3DOrbitingHero: React.FC<Fragrance3DOrbitingHeroProps> = (
           if (!b) return;
           b.angle += b.speed + velocityRef.current * 0.5;
 
-          // Orbit around Y-axis
           const rotX = b.x * Math.cos(angle) - b.z * Math.sin(angle);
           const rotZ = b.x * Math.sin(angle) + b.z * Math.cos(angle);
 
-          // 3D Perspective Projection
           const perspective = 500;
-          const scale = perspective / (perspective + rotZ + 250);
+          const denom = perspective + rotZ + 250;
+          if (denom <= 20) return; // Prevent division by zero or negative perspective
+          const scale = perspective / denom;
+          if (scale <= 0 || !isFinite(scale)) return;
+
           const projX = centerX + rotX * scale;
           const projY = centerY + b.y * scale;
 
-          const ovalWidth = Math.max(b.radius * scale * 2.2, 1);  // Anamorphic horizontal stretch
-          const ovalHeight = Math.max(b.radius * scale * 0.85, 0.5); // Oval lens squeeze
+          const ovalWidth = Math.max(Math.abs(b.radius * scale * 2.2), 1);
+          const ovalHeight = Math.max(Math.abs(b.radius * scale * 0.85), 0.5);
 
           ctx.save();
           ctx.translate(projX, projY);
-          ctx.rotate(-0.15); // Slight anamorphic lens tilt
+          ctx.rotate(-0.15);
           ctx.globalAlpha = Math.min(Math.max(b.opacity * scale, 0.05), 0.85);
 
           ctx.beginPath();
@@ -219,15 +249,17 @@ export const Fragrance3DOrbitingHero: React.FC<Fragrance3DOrbitingHeroProps> = (
           ctx.fillStyle = bokehGrad;
           ctx.fill();
 
-          // Anamorphic Specular Glint Center
           ctx.beginPath();
-          ctx.ellipse(0, 0, ovalWidth * 0.3, ovalHeight * 0.3, 0, 0, Math.PI * 2);
+          ctx.ellipse(0, 0, Math.max(ovalWidth * 0.3, 0.5), Math.max(ovalHeight * 0.3, 0.5), 0, 0, Math.PI * 2);
           ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
           ctx.fill();
 
           ctx.restore();
         });
       }
+
+      // 3. Draw 3D Volumetric Photorealistic Perfume Bottle in Canvas
+      draw3DCanvasBottle(ctx, centerX, centerY, width, height, angle, accentColorRef.current);
 
       animId = requestAnimationFrame(render);
     };
@@ -238,7 +270,7 @@ export const Fragrance3DOrbitingHero: React.FC<Fragrance3DOrbitingHeroProps> = (
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animId);
     };
-  }, [onOrbitChange]);
+  }, []);
 
   const degVal = Math.round((((orbitAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) * (180 / Math.PI));
 
@@ -249,83 +281,433 @@ export const Fragrance3DOrbitingHero: React.FC<Fragrance3DOrbitingHeroProps> = (
       onTouchStart={(e) => e.touches[0] && handlePointerDown(e.touches[0].clientX)}
       className={`relative w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing select-none ${className}`}
     >
-      {/* Dynamic 50mm Anamorphic Bokeh & Light Ribbon Canvas */}
+      {/* Photorealistic 3D Canvas Engine (Bokeh, Ribbon & Solid 3D Bottle) */}
       <canvas
         ref={canvasRef}
         className="absolute inset-0 pointer-events-none w-full h-full z-10"
       />
 
-      {/* Center 360-Degree Revolving Luxury Perfume Bottle Axis */}
-      <div
-        className="relative z-20 w-48 sm:w-72 aspect-[3/4] flex items-center justify-center transition-transform duration-100 ease-out transform-gpu pointer-events-none"
-        style={{
-          transform: `perspective(1000px) rotateY(${degVal}deg) scale(1.05)`,
-          transformStyle: 'preserve-3d'
-        }}
-      >
-        {/* 3D Bottle Silhouette / Anamorphic Render Vessel */}
-        <div className="relative w-full h-full flex flex-col items-center justify-center">
-          
-          {/* Metallic Gold Cap */}
-          <div className="w-16 sm:w-24 h-10 sm:h-14 bg-gradient-to-r from-[#D6A35D] via-[#FFF5D6] to-[#9A5C24] rounded-t-sm shadow-2xl border-b border-[#3A2418] relative overflow-hidden">
-            <div
-              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/70 to-transparent transition-transform duration-75"
-              style={{ transform: `translateX(${((degVal % 180) - 90) * 1.5}px)` }}
-            />
-          </div>
-
-          {/* Glass Neck Lip Ring */}
-          <div className="w-12 sm:w-18 h-3 bg-gradient-to-r from-white/40 via-white/80 to-white/30 border-x border-white/60" />
-
-          {/* Crystal Glass Body with Warm Amber Liquid */}
-          <div
-            className="relative w-44 sm:w-64 h-56 sm:h-80 bg-gradient-to-b from-white/20 via-white/5 to-black/50 border-2 border-white/40 backdrop-blur-md shadow-[0_25px_60px_rgba(0,0,0,0.95)] flex flex-col justify-end p-3 overflow-hidden"
-            style={{ borderRadius: '14px 14px 32px 32px' }}
-          >
-            {/* Beveled Facet Edge Refractions */}
-            <div className="absolute inset-y-0 left-0 w-3 bg-gradient-to-r from-white/60 to-transparent" />
-            <div className="absolute inset-y-0 right-0 w-3 bg-gradient-to-l from-white/60 to-transparent" />
-
-            {/* Liquid Amber Reservoir */}
-            <div
-              className="relative w-full h-[78%] rounded-b-2xl overflow-hidden transition-all duration-300"
-              style={{
-                background: `linear-gradient(180deg, ${accentColor}DD 0%, #9A5C24EE 60%, #3A2418 100%)`,
-                boxShadow: `inset 0 0 50px ${accentColor}AA`
-              }}
-            >
-              {/* Liquid Wave Line */}
-              <div
-                className="absolute top-0 inset-x-0 h-4 bg-white/50 rounded-full animate-pulse blur-[1px]"
-                style={{ transform: `scaleY(0.7) translateY(${Math.sin(degVal * 0.05) * 6}px)` }}
-              />
-
-              {/* Embossed Branding Plate */}
-              <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 p-3 bg-black/80 backdrop-blur-md border border-[#D6A35D]/70 text-center shadow-2xl">
-                <span className="text-[8px] sm:text-[9px] font-mono tracking-[0.3em] text-[#D6A35D] uppercase block">
-                  EAU DE PARFUM
-                </span>
-                <span className="font-serif text-xs sm:text-sm font-bold text-[#F4EFE7] tracking-[0.2em] uppercase block">
-                  MUNAAZ ESSENCE
-                </span>
-              </div>
-            </div>
-
-            {/* Orbiting Specular Glint Refraction */}
-            <div
-              className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent pointer-events-none transition-transform duration-75"
-              style={{ transform: `translateX(${((degVal % 180) - 90) * 3}px)` }}
-            />
-          </div>
-
-        </div>
-      </div>
-
       {/* Orbit Indicator & Drag Prompt */}
       <div className="absolute bottom-6 left-6 z-30 flex items-center gap-2 bg-black/80 backdrop-blur-md px-3.5 py-1.5 border border-[#D6A35D]/40 text-[9px] font-mono text-[#D6A35D] uppercase tracking-widest pointer-events-none">
         <span className="w-2 h-2 rounded-full bg-[#D6A35D] animate-ping" />
-        <span>360° ORBITING AXIS · {degVal}°</span>
+        <span>360° VOLUMETRIC BOTTLE · {degVal}°</span>
       </div>
     </div>
   );
 };
+
+// PHOTOREALISTIC 3D CANVAS BOTTLE RENDER ENGINE
+function draw3DCanvasBottle(
+  ctx: CanvasRenderingContext2D,
+  centerX: number,
+  centerY: number,
+  canvasWidth: number,
+  canvasHeight: number,
+  angle: number,
+  accentColor: string
+) {
+  const isMobile = canvasWidth < 768;
+
+  // Geometry dimensions
+  const bw = isMobile ? 54 : 76; // Body half-width
+  const bh = isMobile ? 150 : 200; // Body height
+  const bd = isMobile ? 26 : 34; // Body half-depth (Total depth = 52px / 68px)
+
+  const cw = isMobile ? 24 : 32; // Cap half-width
+  const ch = isMobile ? 36 : 46; // Cap height
+  const cd = isMobile ? 18 : 24; // Cap half-depth
+
+  const yBodyTop = isMobile ? -50 : -70;
+  const yBodyBottom = yBodyTop + bh;
+
+  const yNeckTop = yBodyTop - 12;
+  const yCapBottom = yNeckTop;
+  const yCapTop = yCapBottom - ch;
+
+  const perspective = 700;
+
+  // 3D Projection Helper
+  const project = (x: number, y: number, z: number): Project2D => {
+    const cosA = Math.cos(angle);
+    const sinA = Math.sin(angle);
+
+    const rx = x * cosA + z * sinA;
+    const ry = y;
+    const rz = -x * sinA + z * cosA;
+
+    const scale = perspective / (perspective + rz + 150);
+    return {
+      px: centerX + rx * scale,
+      py: centerY + ry * scale,
+      rz,
+      scale
+    };
+  };
+
+  // Pedestal Ambient Shadow
+  ctx.save();
+  const shadowScale = project(0, yBodyBottom + 20, 0);
+  ctx.beginPath();
+  ctx.ellipse(shadowScale.px, shadowScale.py, bw * 1.3 * shadowScale.scale, bd * 0.8 * shadowScale.scale, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+  ctx.filter = 'blur(12px)';
+  ctx.fill();
+  ctx.restore();
+
+  // Define 3D Faces
+  const faces: Face3D[] = [];
+
+  // CAP FACES
+  faces.push({
+    id: 'cap-front',
+    type: 'cap',
+    points: [
+      { x: -cw, y: yCapTop, z: cd },
+      { x: cw, y: yCapTop, z: cd },
+      { x: cw, y: yCapBottom, z: cd },
+      { x: -cw, y: yCapBottom, z: cd }
+    ]
+  });
+
+  faces.push({
+    id: 'cap-back',
+    type: 'cap',
+    points: [
+      { x: cw, y: yCapTop, z: -cd },
+      { x: -cw, y: yCapTop, z: -cd },
+      { x: -cw, y: yCapBottom, z: -cd },
+      { x: cw, y: yCapBottom, z: -cd }
+    ]
+  });
+
+  faces.push({
+    id: 'cap-left',
+    type: 'cap',
+    points: [
+      { x: -cw, y: yCapTop, z: -cd },
+      { x: -cw, y: yCapTop, z: cd },
+      { x: -cw, y: yCapBottom, z: cd },
+      { x: -cw, y: yCapBottom, z: -cd }
+    ]
+  });
+
+  faces.push({
+    id: 'cap-right',
+    type: 'cap',
+    points: [
+      { x: cw, y: yCapTop, z: cd },
+      { x: cw, y: yCapTop, z: -cd },
+      { x: cw, y: yCapBottom, z: -cd },
+      { x: cw, y: yCapBottom, z: cd }
+    ]
+  });
+
+  faces.push({
+    id: 'cap-top',
+    type: 'cap',
+    points: [
+      { x: -cw, y: yCapTop, z: -cd },
+      { x: cw, y: yCapTop, z: -cd },
+      { x: cw, y: yCapTop, z: cd },
+      { x: -cw, y: yCapTop, z: cd }
+    ]
+  });
+
+  // BODY FACES
+  faces.push({
+    id: 'body-front',
+    type: 'body-front',
+    points: [
+      { x: -bw, y: yBodyTop, z: bd },
+      { x: bw, y: yBodyTop, z: bd },
+      { x: bw, y: yBodyBottom, z: bd },
+      { x: -bw, y: yBodyBottom, z: bd }
+    ]
+  });
+
+  faces.push({
+    id: 'body-back',
+    type: 'body-back',
+    points: [
+      { x: bw, y: yBodyTop, z: -bd },
+      { x: -bw, y: yBodyTop, z: -bd },
+      { x: -bw, y: yBodyBottom, z: -bd },
+      { x: bw, y: yBodyBottom, z: -bd }
+    ]
+  });
+
+  faces.push({
+    id: 'body-left',
+    type: 'body-side',
+    points: [
+      { x: -bw, y: yBodyTop, z: -bd },
+      { x: -bw, y: yBodyTop, z: bd },
+      { x: -bw, y: yBodyBottom, z: bd },
+      { x: -bw, y: yBodyBottom, z: -bd }
+    ]
+  });
+
+  faces.push({
+    id: 'body-right',
+    type: 'body-side',
+    points: [
+      { x: bw, y: yBodyTop, z: bd },
+      { x: bw, y: yBodyTop, z: -bd },
+      { x: bw, y: yBodyBottom, z: -bd },
+      { x: bw, y: yBodyBottom, z: bd }
+    ]
+  });
+
+  faces.push({
+    id: 'body-top',
+    type: 'body-top',
+    points: [
+      { x: -bw, y: yBodyTop, z: -bd },
+      { x: bw, y: yBodyTop, z: -bd },
+      { x: bw, y: yBodyTop, z: bd },
+      { x: -bw, y: yBodyTop, z: bd }
+    ]
+  });
+
+  faces.push({
+    id: 'body-bottom',
+    type: 'body-bottom',
+    points: [
+      { x: -bw, y: yBodyBottom, z: bd },
+      { x: bw, y: yBodyBottom, z: bd },
+      { x: bw, y: yBodyBottom, z: -bd },
+      { x: -bw, y: yBodyBottom, z: -bd }
+    ]
+  });
+
+  // Sort Faces by Z-Depth (Painter's Algorithm)
+  const renderedFaces = faces.map((face) => {
+    const projPoints = face.points.map((pt) => project(pt.x, pt.y, pt.z));
+    const avgRz = projPoints.reduce((sum, p) => sum + p.rz, 0) / projPoints.length;
+
+    // Calculate face normal vector in 3D
+    const p0 = face.points[0];
+    const p1 = face.points[1];
+    const p2 = face.points[2];
+
+    const v1 = { x: p1.x - p0.x, y: p1.y - p0.y, z: p1.z - p0.z };
+    const v2 = { x: p2.x - p0.x, y: p2.y - p0.y, z: p2.z - p0.z };
+
+    const nx = v1.y * v2.z - v1.z * v2.y;
+    const ny = v1.z * v2.x - v1.x * v2.z;
+    const nz = v1.x * v2.y - v1.y * v2.x;
+
+    const len = Math.hypot(nx, ny, nz) || 1;
+    const norm = { x: nx / len, y: ny / len, z: nz / len };
+
+    // Rotate normal to world space
+    const cosA = Math.cos(angle);
+    const sinA = Math.sin(angle);
+    const worldNx = norm.x * cosA + norm.z * sinA;
+    const worldNz = -norm.x * sinA + norm.z * cosA;
+
+    return {
+      face,
+      projPoints,
+      avgRz,
+      worldNx,
+      worldNz,
+      worldNy: norm.y
+    };
+  });
+
+  renderedFaces.sort((a, b) => b.avgRz - a.avgRz);
+
+  // Draw Glass Neck Ring
+  const drawNeck = () => {
+    const topNeck = project(0, yNeckTop, 0);
+    const botNeck = project(0, yBodyTop, 0);
+    const neckR = (isMobile ? 14 : 18) * topNeck.scale;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(topNeck.px, (topNeck.py + botNeck.py) / 2, neckR, 8 * topNeck.scale, 0, 0, Math.PI * 2);
+
+    const neckGrad = ctx.createLinearGradient(topNeck.px - neckR, 0, topNeck.px + neckR, 0);
+    neckGrad.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+    neckGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.95)');
+    neckGrad.addColorStop(1, 'rgba(255, 255, 255, 0.3)');
+
+    ctx.fillStyle = neckGrad;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.lineWidth = 1;
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  };
+
+  // Light Direction Vector
+  const lightDir = { x: 0.5, y: -0.6, z: 0.6 };
+
+  // Draw Each Face
+  renderedFaces.forEach(({ face, projPoints, worldNx, worldNy, worldNz }) => {
+    // Only render front-facing polygons (culling back-facing normals)
+    if (worldNz < -0.05 && face.id !== 'body-top' && face.id !== 'body-bottom') return;
+
+    // Light Intensity calculation
+    const dotLight = Math.max(0.15, worldNx * lightDir.x + worldNy * lightDir.y + worldNz * lightDir.z);
+
+    ctx.save();
+    ctx.beginPath();
+    projPoints.forEach((p, idx) => {
+      if (idx === 0) ctx.moveTo(p.px, p.py);
+      else ctx.lineTo(p.px, p.py);
+    });
+    ctx.closePath();
+
+    if (face.type === 'cap') {
+      // Metallic Gold Cap Face
+      const goldGrad = ctx.createLinearGradient(
+        projPoints[0].px, projPoints[0].py,
+        projPoints[2].px, projPoints[2].py
+      );
+      const intensity = Math.min(Math.max(dotLight * 1.3, 0.3), 1);
+
+      goldGrad.addColorStop(0, `rgba(214, 163, 93, ${intensity})`);
+      goldGrad.addColorStop(0.5, `rgba(255, 245, 214, ${Math.min(intensity * 1.2, 1)})`);
+      goldGrad.addColorStop(1, `rgba(154, 92, 36, ${intensity * 0.8})`);
+
+      ctx.fillStyle = goldGrad;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 245, 214, 0.6)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else if (face.id === 'body-back') {
+      // Dark Smoked Glass Back Wall
+      ctx.fillStyle = 'rgba(26, 16, 12, 0.95)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(58, 36, 24, 0.8)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else if (face.type === 'body-side') {
+      // Glass Side Wall with Fluid Core (Visible at 90° & 270°)
+      const sideGrad = ctx.createLinearGradient(
+        projPoints[0].px, projPoints[0].py,
+        projPoints[1].px, projPoints[1].py
+      );
+      sideGrad.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
+      sideGrad.addColorStop(0.2, accentColor + 'CC');
+      sideGrad.addColorStop(0.8, '#3A2418EE');
+      sideGrad.addColorStop(1, 'rgba(255, 255, 255, 0.3)');
+
+      ctx.fillStyle = sideGrad;
+      ctx.fill();
+
+      // Specular Glass Edge Line
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    } else if (face.id === 'body-top' || face.id === 'body-bottom') {
+      // Glass Shoulder / Base Facet
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else if (face.id === 'body-front') {
+      // Crystal Clear Front Glass Face with Liquid & Gold Label
+      const pTopL = projPoints[0];
+      const pTopR = projPoints[1];
+      const pBotR = projPoints[2];
+      const pBotL = projPoints[3];
+
+      // Glass Background
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.fill();
+
+      // Liquid Amber Reservoir
+      const fluidTopY = pTopL.py + (pBotL.py - pTopL.py) * 0.22;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(pTopL.px, fluidTopY);
+      ctx.lineTo(pTopR.px, fluidTopY);
+      ctx.lineTo(pBotR.px, pBotR.py);
+      ctx.lineTo(pBotL.px, pBotL.py);
+      ctx.closePath();
+
+      const liquidGrad = ctx.createLinearGradient(pTopL.px, fluidTopY, pBotL.px, pBotL.py);
+      liquidGrad.addColorStop(0, accentColor + 'F0');
+      liquidGrad.addColorStop(0.6, '#9A5C24EE');
+      liquidGrad.addColorStop(1, '#2A150CFF');
+
+      ctx.fillStyle = liquidGrad;
+      ctx.fill();
+      ctx.restore();
+
+      // Glass Bevel Borders
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Embossed Luxury Label Plate (Only drawn if facing camera)
+      if (worldNz > 0.2) {
+        const labelCenterX = (pTopL.px + pTopR.px + pBotR.px + pBotL.px) / 4;
+        const labelCenterY = (pTopL.py + pTopR.py + pBotR.py + pBotL.py) / 4;
+        const labelW = (pTopR.px - pTopL.px) * 0.72;
+        const labelH = (pBotL.py - pTopL.py) * 0.32;
+
+        ctx.save();
+        ctx.translate(labelCenterX, labelCenterY);
+
+        // Label Outer Gold Border
+        ctx.fillStyle = 'rgba(15, 12, 10, 0.92)';
+        ctx.strokeStyle = '#D6A35D';
+        ctx.lineWidth = 1.5;
+
+        ctx.beginPath();
+        ctx.rect(-labelW / 2, -labelH / 2, labelW, labelH);
+        ctx.fill();
+        ctx.stroke();
+
+        // Label Typography
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Subtitle
+        ctx.fillStyle = '#D6A35D';
+        ctx.font = `${Math.max(7, Math.round(9 * pTopL.scale))}px monospace`;
+        ctx.fillText('HAUTE PARFUMERIE', 0, -labelH * 0.25);
+
+        // Main Title
+        ctx.fillStyle = '#F4EFE7';
+        ctx.font = `bold ${Math.max(10, Math.round(13 * pTopL.scale))}px Georgia, serif`;
+        ctx.fillText('MUNAAZ ESSENCE', 0, 0);
+
+        // Concentration
+        ctx.fillStyle = 'rgba(214, 163, 93, 0.85)';
+        ctx.font = `${Math.max(6, Math.round(8 * pTopL.scale))}px sans-serif`;
+        ctx.fillText('EXTRAIT DE PARFUM', 0, labelH * 0.28);
+
+        ctx.restore();
+      }
+
+      // Dynamic Specular Glare Reflection Streak
+      const glintX = pTopL.px + (pTopR.px - pTopL.px) * (0.3 + Math.sin(angle) * 0.3);
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(glintX, pTopL.py);
+      ctx.lineTo(glintX + 15, pTopL.py);
+      ctx.lineTo(glintX - 10, pBotL.py);
+      ctx.lineTo(glintX - 25, pBotL.py);
+      ctx.closePath();
+
+      const glintGrad = ctx.createLinearGradient(glintX - 25, pTopL.py, glintX + 15, pBotL.py);
+      glintGrad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+      glintGrad.addColorStop(1, 'rgba(255, 255, 255, 0.05)');
+
+      ctx.fillStyle = glintGrad;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.restore();
+  });
+
+  // Render Neck Ring at exact 3D neck position
+  drawNeck();
+}
