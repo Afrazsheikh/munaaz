@@ -19,6 +19,9 @@ export interface FragranceScene {
   notes: string[];
   accentColor: string;
   particleType: 'bubbles' | 'citrus' | 'petals' | 'spices' | 'pure';
+  bgPosition?: string;
+  animationType?: 'zoomIn' | 'liquidRefraction' | 'fadeZoom';
+  enabled?: boolean;
 }
 
 export interface FragranceProduct {

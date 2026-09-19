@@ -256,6 +256,36 @@ export const FragranceAdminModal: React.FC<FragranceAdminModalProps> = ({
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-semibold text-[#D6A35D] uppercase block mb-1">
+                        Animation Travel Type
+                      </label>
+                      <select
+                        value={selectedScene.animationType || 'zoomIn'}
+                        onChange={(e) => handleSceneChange('animationType', e.target.value)}
+                        className="w-full bg-[#211815] border border-[#3A2418] px-3 py-2 text-xs text-[#F4EFE7] focus:border-[#9A5C24] outline-none"
+                      >
+                        <option value="zoomIn">Continuous Camera Zoom-In</option>
+                        <option value="liquidRefraction">Submerged Liquid Refraction</option>
+                        <option value="fadeZoom">Deep Fade & Macro Zoom</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-[#D6A35D] uppercase block mb-1">
+                        Background Focal Position
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="center / top / 50% 40%"
+                        value={selectedScene.bgPosition || 'center'}
+                        onChange={(e) => handleSceneChange('bgPosition', e.target.value)}
+                        className="w-full bg-[#211815] border border-[#3A2418] px-3 py-2 text-xs text-[#F4EFE7] focus:border-[#9A5C24] outline-none"
+                      />
+                    </div>
+                  </div>
+
                   <div>
                     <label className="text-xs font-semibold text-[#D6A35D] uppercase block mb-1">
                       Scene Key Notes (Comma Separated)
