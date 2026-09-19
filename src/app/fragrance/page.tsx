@@ -80,6 +80,7 @@ export default function FragrancePage() {
                 src="https://images.unsplash.com/photo-1615397349754-cfa2066a298e?q=80&w=1000&auto=format&fit=crop"
                 alt="Grasse Perfumery Atelier"
                 fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
                 className="object-cover filter contrast-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#150F0D] via-transparent to-transparent opacity-60" />

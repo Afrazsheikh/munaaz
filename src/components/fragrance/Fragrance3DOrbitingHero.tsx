@@ -185,46 +185,49 @@ export const Fragrance3DOrbitingHero: React.FC<Fragrance3DOrbitingHeroProps> = (
       ctx.restore();
 
       // 2. Draw 50mm Anamorphic Oval Bokeh Particles
-      bokehs.forEach((b) => {
-        b.angle += b.speed + velocityRef.current * 0.5;
+      if (Array.isArray(bokehs) && bokehs.length > 0) {
+        bokehs.forEach((b) => {
+          if (!b) return;
+          b.angle += b.speed + velocityRef.current * 0.5;
 
-        // Orbit around Y-axis
-        const rotX = b.x * Math.cos(angle) - b.z * Math.sin(angle);
-        const rotZ = b.x * Math.sin(angle) + b.z * Math.cos(angle);
+          // Orbit around Y-axis
+          const rotX = b.x * Math.cos(angle) - b.z * Math.sin(angle);
+          const rotZ = b.x * Math.sin(angle) + b.z * Math.cos(angle);
 
-        // 3D Perspective Projection
-        const perspective = 500;
-        const scale = perspective / (perspective + rotZ + 250);
-        const projX = centerX + rotX * scale;
-        const projY = centerY + b.y * scale;
+          // 3D Perspective Projection
+          const perspective = 500;
+          const scale = perspective / (perspective + rotZ + 250);
+          const projX = centerX + rotX * scale;
+          const projY = centerY + b.y * scale;
 
-        const ovalWidth = b.radius * scale * 2.2;  // Anamorphic horizontal stretch
-        const ovalHeight = b.radius * scale * 0.85; // Oval lens squeeze
+          const ovalWidth = Math.max(b.radius * scale * 2.2, 1);  // Anamorphic horizontal stretch
+          const ovalHeight = Math.max(b.radius * scale * 0.85, 0.5); // Oval lens squeeze
 
-        ctx.save();
-        ctx.translate(projX, projY);
-        ctx.rotate(-0.15); // Slight anamorphic lens tilt
-        ctx.globalAlpha = Math.min(Math.max(b.opacity * scale, 0.05), 0.85);
+          ctx.save();
+          ctx.translate(projX, projY);
+          ctx.rotate(-0.15); // Slight anamorphic lens tilt
+          ctx.globalAlpha = Math.min(Math.max(b.opacity * scale, 0.05), 0.85);
 
-        ctx.beginPath();
-        ctx.ellipse(0, 0, ovalWidth, ovalHeight, 0, 0, Math.PI * 2);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, ovalWidth, ovalHeight, 0, 0, Math.PI * 2);
 
-        const bokehGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, ovalWidth);
-        bokehGrad.addColorStop(0, b.color + '0.95)');
-        bokehGrad.addColorStop(0.6, b.color + '0.4)');
-        bokehGrad.addColorStop(1, b.color + '0)');
+          const bokehGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, ovalWidth);
+          bokehGrad.addColorStop(0, b.color + '0.95)');
+          bokehGrad.addColorStop(0.6, b.color + '0.4)');
+          bokehGrad.addColorStop(1, b.color + '0)');
 
-        ctx.fillStyle = bokehGrad;
-        ctx.fill();
+          ctx.fillStyle = bokehGrad;
+          ctx.fill();
 
-        // Anamorphic Specular Glint Center
-        ctx.beginPath();
-        ctx.ellipse(0, 0, ovalWidth * 0.3, ovalHeight * 0.3, 0, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        ctx.fill();
+          // Anamorphic Specular Glint Center
+          ctx.beginPath();
+          ctx.ellipse(0, 0, ovalWidth * 0.3, ovalHeight * 0.3, 0, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+          ctx.fill();
 
-        ctx.restore();
-      });
+          ctx.restore();
+        });
+      }
 
       animId = requestAnimationFrame(render);
     };
