@@ -67,20 +67,20 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center justify-between">
           
           {/* Mobile Menu Icon */}
-          <div className="flex items-center lg:hidden gap-3">
+          <div className="flex items-center lg:hidden gap-1.5 sm:gap-3 flex-shrink-0">
             <button
               onClick={onOpenMobileMenu}
-              className="p-2 text-[#35251E] hover:text-[#A85F43] transition-colors focus:outline-none"
+              className="p-1.5 sm:p-2 text-[#35251E] hover:text-[#A85F43] transition-colors focus:outline-none"
               aria-label="Open Mobile Menu"
             >
-              <Menu className="w-6 h-6" />
+              <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
             <button
               onClick={onOpenSearch}
-              className="p-2 text-[#35251E] hover:text-[#A85F43] transition-colors"
+              className="p-1.5 sm:p-2 text-[#35251E] hover:text-[#A85F43] transition-colors"
               aria-label="Search"
             >
-              <Search className="w-5 h-5" />
+              <Search className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
 
@@ -135,19 +135,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
 
           {/* Centered Brand Logo */}
-          <div className="text-center px-4">
-            <Link href="/" className="inline-block group">
-              <span className="font-serif text-2xl sm:text-3xl lg:text-3xl xl:text-4xl tracking-[0.25em] font-bold text-[#35251E] group-hover:text-[#A85F43] transition-colors">
+          <div className="text-center px-1 sm:px-4 flex-1 min-w-0 mx-1">
+            <Link href="/" className="inline-block group max-w-full truncate">
+              <span className="font-serif text-lg xs:text-2xl sm:text-3xl lg:text-3xl xl:text-4xl tracking-[0.15em] xs:tracking-[0.25em] font-bold text-[#35251E] group-hover:text-[#A85F43] transition-colors block truncate">
                 {BRAND_CONFIG.name}
               </span>
-              <span className="block text-[9px] tracking-[0.3em] uppercase text-[#806B5D] -mt-1 font-sans">
+              <span className="block text-[8px] sm:text-[9px] tracking-[0.25em] sm:tracking-[0.3em] uppercase text-[#806B5D] -mt-0.5 sm:-mt-1 font-sans">
                 ATELIER
               </span>
             </Link>
           </div>
 
           {/* Action Icons Right */}
-          <div className="flex items-center gap-3 sm:gap-5">
+          <div className="flex items-center gap-1 xs:gap-3 sm:gap-5 flex-shrink-0">
             <button
               onClick={onOpenSearch}
               className="hidden lg:flex p-2 text-[#35251E] hover:text-[#A85F43] transition-colors"
@@ -158,21 +158,21 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <Link
               href={isAuthenticated ? '/account' : '/login'}
-              className="p-2 text-[#35251E] hover:text-[#A85F43] transition-colors"
+              className="p-1.5 sm:p-2 text-[#35251E] hover:text-[#A85F43] transition-colors"
               aria-label="Customer Account"
               title={isAuthenticated ? 'My Account' : 'Sign In'}
             >
-              <User className="w-5 h-5" />
+              <User className="w-4 h-4 sm:w-5 sm:h-5" />
             </Link>
 
             <Link
               href="/wishlist"
-              className="p-2 text-[#35251E] hover:text-[#A85F43] transition-colors relative"
+              className="p-1.5 sm:p-2 text-[#35251E] hover:text-[#A85F43] transition-colors relative"
               aria-label="Wishlist"
             >
-              <Heart className="w-5 h-5" />
+              <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
               {wishlistCount > 0 && (
-                <span className="absolute top-1 right-1 bg-[#A85F43] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                <span className="absolute top-0.5 right-0.5 bg-[#A85F43] text-white text-[9px] w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full flex items-center justify-center font-bold">
                   {wishlistCount}
                 </span>
               )}
@@ -180,12 +180,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={openCart}
-              className="p-2 text-[#35251E] hover:text-[#A85F43] transition-colors relative"
+              className="p-1.5 sm:p-2 text-[#35251E] hover:text-[#A85F43] transition-colors relative"
               aria-label="Shopping Bag"
             >
-              <ShoppingBag className="w-5 h-5" />
+              <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
               {totalItems > 0 && (
-                <span className="absolute top-1 right-1 bg-[#2A1D18] text-[#F3E5D0] text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                <span className="absolute top-0.5 right-0.5 bg-[#2A1D18] text-[#F3E5D0] text-[9px] w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full flex items-center justify-center font-bold">
                   {totalItems}
                 </span>
               )}
