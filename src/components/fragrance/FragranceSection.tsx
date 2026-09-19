@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import Image from 'next/image';
 import { Sparkles, ShoppingBag, Info, Edit, Check, Star, ChevronRight } from 'lucide-react';
 import { FragranceDataStore, FragranceProduct, FragranceScene } from '@/types/fragrance';
 import { fragranceService } from '@/services/fragranceService';
@@ -26,16 +25,15 @@ interface Particle {
 }
 
 export const FragranceSection: React.FC = () => {
-  const [storeData, setStoreData] = useState<FragranceDataStore | null>(null);
+  // Synchronous state initialization to prevent initial null render / blank flash
+  const [storeData, setStoreData] = useState<FragranceDataStore>(() => fragranceService.getFragranceData());
   const [selectedNotesProduct, setSelectedNotesProduct] = useState<FragranceProduct | null>(null);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [addedProductId, setAddedProductId] = useState<string | null>(null);
 
-  // Cinematic Camera & Scroll Engine State
-  const scrollTrackRef = useRef<HTMLDivElement>(null);
+  // Cinematic Camera & Slideshow Engine State
   const [currentSceneIndex, setCurrentSceneIndex] = useState(0);
-  const [scrollProgress, setScrollProgress] = useState(0);
-  const [zoomScale, setZoomScale] = useState(1.04);
+  const [isZoomingIn, setIsZoomingIn] = useState(false);
   const [textKey, setTextKey] = useState(0);
 
   // Mouse Parallax & Motion
@@ -46,65 +44,42 @@ export const FragranceSection: React.FC = () => {
 
   const { addItem } = useCart();
 
-  useEffect(() => {
-    setStoreData(fragranceService.getFragranceData());
-  }, []);
+  const scenes = storeData.scenes && storeData.scenes.length > 0 ? storeData.scenes : fragranceService.getFragranceData().scenes;
+  const activeScene: FragranceScene = scenes[currentSceneIndex] || scenes[0];
+  const products = storeData.products && storeData.products.length > 0 ? storeData.products : fragranceService.getFragranceData().products;
 
-  const scenes = storeData?.scenes || [];
-  const activeScene: FragranceScene | undefined = scenes[currentSceneIndex] || scenes[0];
-  const products = storeData?.products || [];
+  // Macro Camera Zoom Travel Engine
+  const changeScene = useCallback((newIndex: number) => {
+    if (newIndex === currentSceneIndex || isZoomingIn || scenes.length === 0) return;
 
-  // Scroll Progress Listener & Pinned Scene Sync Engine
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!scrollTrackRef.current || scenes.length === 0) return;
-      const rect = scrollTrackRef.current.getBoundingClientRect();
-      const totalScrollable = rect.height - window.innerHeight;
-      
-      if (totalScrollable <= 0) return;
+    // Phase 1: Camera zooms into bottle opening/liquid
+    setIsZoomingIn(true);
 
-      const progress = Math.min(Math.max(-rect.top / totalScrollable, 0), 1);
-      setScrollProgress(progress);
+    setTimeout(() => {
+      // Phase 2: Switch scene and re-trigger text entrance
+      setCurrentSceneIndex(newIndex);
+      setTextKey((prev) => prev + 1);
 
-      const calculatedIndex = Math.min(Math.floor(progress * scenes.length), scenes.length - 1);
-
-      if (calculatedIndex !== currentSceneIndex) {
-        setCurrentSceneIndex(calculatedIndex);
-        setTextKey((prev) => prev + 1);
-      }
-
-      // Macro Zoom Interpolation per Scene step
-      const sceneStep = 1 / scenes.length;
-      const progressWithinScene = (progress % sceneStep) / sceneStep;
-      const interpolatedScale = 1.04 + progressWithinScene * 0.32;
-      setZoomScale(interpolatedScale);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [scenes.length, currentSceneIndex]);
-
-  // Smooth Navigation to Scene via Indicators or Buttons
-  const scrollToScene = useCallback((targetIndex: number) => {
-    if (!scrollTrackRef.current || scenes.length === 0) return;
-    const rect = scrollTrackRef.current.getBoundingClientRect();
-    const scrollTrackTop = window.scrollY + rect.top;
-    const totalScrollable = rect.height - window.innerHeight;
-
-    const targetScrollY = scrollTrackTop + (targetIndex / (scenes.length - 1)) * totalScrollable;
-
-    window.scrollTo({
-      top: targetScrollY,
-      behavior: 'smooth'
-    });
-  }, [scenes.length]);
+      setTimeout(() => {
+        // Phase 3: Camera pulls back slightly as new scene sharpens inside bottle
+        setIsZoomingIn(false);
+      }, 400);
+    }, 450);
+  }, [currentSceneIndex, isZoomingIn, scenes.length]);
 
   const nextScene = useCallback(() => {
     if (scenes.length === 0) return;
     const nextIdx = (currentSceneIndex + 1) % scenes.length;
-    scrollToScene(nextIdx);
-  }, [currentSceneIndex, scenes.length, scrollToScene]);
+    changeScene(nextIdx);
+  }, [currentSceneIndex, scenes.length, changeScene]);
+
+  // Auto-play slideshow every 6 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      nextScene();
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [nextScene]);
 
   // Mouse Parallax Offset
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -264,8 +239,6 @@ export const FragranceSection: React.FC = () => {
     };
   }, [activeScene, mousePos]);
 
-  if (!storeData || !activeScene) return null;
-
   const primaryProduct = products[0] || {
     id: 'frag-noir',
     slug: 'munaaz-noir',
@@ -336,170 +309,164 @@ export const FragranceSection: React.FC = () => {
       </div>
 
       {/* ========================================================= */}
-      {/* 1. SCROLL TRACK PINNING (500VH TRACK -> 100DVH VIEWPORT)  */}
+      {/* 1. 100DVH FULL-BLEED 4K CINEMATIC MACRO CAMERA TRAVEL HERO*/}
       {/* ========================================================= */}
-      <div ref={scrollTrackRef} className="relative w-full h-[450vh] sm:h-[500vh]">
-        <div
-          ref={heroRef}
-          onMouseMove={handleMouseMove}
-          className="sticky top-0 w-full h-[100dvh] min-h-[540px] sm:min-h-[620px] flex items-center justify-between overflow-hidden transform-gpu"
-        >
-          {/* Full-Bleed 4K Edge-to-Edge Macro Visual Layers with Camera Zoom Travel */}
-          <div className="absolute inset-0 z-0">
-            <div
-              className="relative w-full h-full transition-transform duration-300 ease-out"
-              style={{
-                transform: `scale(${zoomScale}) translate(${mousePos.x * -12}px, ${mousePos.y * -12}px)`
-              }}
-            >
-              {/* Desktop 4K Macro Image */}
-              <Image
-                src={activeScene.desktopImage}
-                alt={activeScene.name}
-                fill
-                priority
-                quality={95}
-                className="hidden sm:block object-cover object-center transition-opacity duration-700 brightness-95 filter contrast-[1.08] saturate-[1.08]"
-              />
-              {/* Mobile Portrait 4K Macro Image */}
-              <Image
-                src={activeScene.mobileImage || activeScene.desktopImage}
-                alt={activeScene.name}
-                fill
-                priority
-                quality={95}
-                className="block sm:hidden object-cover object-center transition-opacity duration-700 brightness-95 filter contrast-[1.08] saturate-[1.08]"
-              />
-            </div>
-
-            {/* Golden Amber Liquid Refraction Overlay */}
-            <div
-              className="absolute inset-0 opacity-75 pointer-events-none transition-all duration-700"
-              style={{
-                background: `radial-gradient(circle at ${40 + mousePos.x * 15}% ${50 + mousePos.y * 15}%, rgba(214, 163, 93, 0.28) 0%, rgba(23, 20, 17, 0.75) 65%, rgba(23, 20, 17, 0.95) 100%)`
-              }}
+      <div
+        ref={heroRef}
+        onMouseMove={handleMouseMove}
+        className="relative w-full h-[100dvh] min-h-[540px] sm:min-h-[620px] flex items-center justify-between overflow-hidden transform-gpu"
+      >
+        {/* Full-Bleed 4K Edge-to-Edge Macro Visual Layers with Camera Zoom Travel */}
+        <div className="absolute inset-0 z-0">
+          <div
+            className={`relative w-full h-full transition-transform duration-700 ease-out ${
+              isZoomingIn ? 'scale-135 blur-sm' : 'scale-100 blur-none'
+            }`}
+            style={{
+              transform: `scale(${isZoomingIn ? 1.38 : 1.04}) translate(${mousePos.x * -12}px, ${mousePos.y * -12}px)`
+            }}
+          >
+            {/* Desktop 4K Macro Image */}
+            <img
+              src={activeScene.desktopImage}
+              alt={activeScene.name}
+              className="hidden sm:block w-full h-full object-cover object-center transition-opacity duration-700 brightness-95 filter contrast-[1.08] saturate-[1.08]"
             />
-
-            {/* PHASE 2 OVERLAY: BOTTLE NECK & CAP RIM SHIMMER (Shown when at Scene 02) */}
-            {activeScene.id === 'scene-2' && (
-              <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center p-4">
-                <div className="w-[240px] h-[240px] xs:w-[300px] xs:h-[300px] sm:w-[480px] sm:h-[480px] max-w-[80vw] max-h-[80vw] border-[10px] sm:border-[16px] border-[#D6A35D]/30 rounded-full shadow-[inset_0_0_120px_rgba(214,163,93,0.4)] animate-pulse" />
-                <div className="absolute top-12 px-4 py-1.5 sm:px-6 sm:py-2 bg-black/80 backdrop-blur-md border border-[#D6A35D]/50 text-[9px] sm:text-[10px] font-mono tracking-[0.2em] sm:tracking-[0.3em] text-[#D6A35D] uppercase text-center max-w-[90vw]">
-                  GLASS BOTTLE NECK OPENING · ENTERING LIQUID
-                </div>
-              </div>
-            )}
-
-            {/* PHASES 3, 4, 5 OVERLAY: INSIDE THE GLASS BOTTLE CONTOUR FRAMING */}
-            {['scene-3', 'scene-4', 'scene-5'].includes(activeScene.id) && (
-              <div className="absolute inset-0 z-10 pointer-events-none border-x-[10px] xs:border-x-[20px] sm:border-x-[40px] border-white/10 shadow-[inset_0_0_100px_rgba(214,163,93,0.35)]" />
-            )}
-
-            {/* Left Dark Gradient Overlay for Maximum Text Contrast */}
-            <div className="absolute inset-y-0 left-0 w-full sm:w-2/3 bg-gradient-to-r from-[#171411]/95 via-[#171411]/80 sm:via-[#171411]/70 to-transparent pointer-events-none" />
+            {/* Mobile Portrait 4K Macro Image */}
+            <img
+              src={activeScene.mobileImage || activeScene.desktopImage}
+              alt={activeScene.name}
+              className="block sm:hidden w-full h-full object-cover object-center transition-opacity duration-700 brightness-95 filter contrast-[1.08] saturate-[1.08]"
+            />
           </div>
 
-          {/* High-DPI 4K Canvas Dynamic Motion Overlay (Bubbles, Citrus Orbs, Petals) */}
-          <canvas
-            ref={canvasRef}
-            className="absolute inset-0 z-10 pointer-events-none w-full h-full"
-          />
-
-          {/* Cursor Glass Reflection Highlights */}
+          {/* Golden Amber Liquid Refraction Overlay */}
           <div
-            className="absolute inset-0 z-15 pointer-events-none opacity-30 bg-gradient-to-tr from-transparent via-white/10 to-transparent transition-transform duration-500"
+            className="absolute inset-0 opacity-75 pointer-events-none transition-all duration-700"
             style={{
-              transform: `translateX(${mousePos.x * 35}px) translateY(${mousePos.y * 25}px)`
+              background: `radial-gradient(circle at ${40 + mousePos.x * 15}% ${50 + mousePos.y * 15}%, rgba(214, 163, 93, 0.28) 0%, rgba(23, 20, 17, 0.75) 65%, rgba(23, 20, 17, 0.95) 100%)`
             }}
           />
 
-          {/* LEFT SIDE OVERLAY */}
-          <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-10 lg:px-16 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-8 sm:pt-0">
+          {/* PHASE 2 OVERLAY: BOTTLE NECK & CAP RIM SHIMMER (Shown when at Scene 02) */}
+          {activeScene.id === 'scene-2' && (
+            <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center p-4">
+              <div className="w-[240px] h-[240px] xs:w-[300px] xs:h-[300px] sm:w-[480px] sm:h-[480px] max-w-[80vw] max-h-[80vw] border-[10px] sm:border-[16px] border-[#D6A35D]/30 rounded-full shadow-[inset_0_0_120px_rgba(214,163,93,0.4)] animate-pulse" />
+              <div className="absolute top-12 px-4 py-1.5 sm:px-6 sm:py-2 bg-black/80 backdrop-blur-md border border-[#D6A35D]/50 text-[9px] sm:text-[10px] font-mono tracking-[0.2em] sm:tracking-[0.3em] text-[#D6A35D] uppercase text-center max-w-[90vw]">
+                GLASS BOTTLE NECK OPENING · ENTERING LIQUID
+              </div>
+            </div>
+          )}
+
+          {/* PHASES 3, 4, 5 OVERLAY: INSIDE THE GLASS BOTTLE CONTOUR FRAMING */}
+          {['scene-3', 'scene-4', 'scene-5'].includes(activeScene.id) && (
+            <div className="absolute inset-0 z-10 pointer-events-none border-x-[10px] xs:border-x-[20px] sm:border-x-[40px] border-white/10 shadow-[inset_0_0_100px_rgba(214,163,93,0.35)]" />
+          )}
+
+          {/* Left Dark Gradient Overlay for Maximum Text Contrast */}
+          <div className="absolute inset-y-0 left-0 w-full sm:w-2/3 bg-gradient-to-r from-[#171411]/95 via-[#171411]/80 sm:via-[#171411]/70 to-transparent pointer-events-none" />
+        </div>
+
+        {/* High-DPI 4K Canvas Dynamic Motion Overlay (Bubbles, Citrus Orbs, Petals) */}
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 z-10 pointer-events-none w-full h-full"
+        />
+
+        {/* Cursor Glass Reflection Highlights */}
+        <div
+          className="absolute inset-0 z-15 pointer-events-none opacity-30 bg-gradient-to-tr from-transparent via-white/10 to-transparent transition-transform duration-500"
+          style={{
+            transform: `translateX(${mousePos.x * 35}px) translateY(${mousePos.y * 25}px)`
+          }}
+        />
+
+        {/* LEFT SIDE OVERLAY */}
+        <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-10 lg:px-16 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-8 sm:pt-0">
+          
+          <div key={textKey} className="lg:col-span-7 space-y-4 sm:space-y-6 text-left max-w-xl sm:max-w-none">
             
-            <div key={textKey} className="lg:col-span-7 space-y-4 sm:space-y-6 text-left max-w-xl sm:max-w-none">
-              
-              {/* Category Pill Badge */}
-              <div className="animate-fadeInUp">
-                <span className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 bg-black/70 backdrop-blur-md border border-[#D6A35D]/50 text-[9px] sm:text-[10px] font-bold tracking-[0.2em] sm:tracking-[0.25em] text-[#D6A35D] uppercase">
-                  <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                  <span>{activeScene.badge}</span>
-                </span>
-              </div>
+            {/* Category Pill Badge */}
+            <div className="animate-fadeInUp">
+              <span className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 bg-black/70 backdrop-blur-md border border-[#D6A35D]/50 text-[9px] sm:text-[10px] font-bold tracking-[0.2em] sm:tracking-[0.25em] text-[#D6A35D] uppercase">
+                <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                <span>{activeScene.badge}</span>
+              </span>
+            </div>
 
-              {/* Editorial Heading */}
-              <div className="animate-fadeInUp delay-100">
-                <h1 className="font-serif text-3xl xs:text-4xl sm:text-6xl lg:text-7xl font-bold tracking-[0.1em] sm:tracking-[0.12em] uppercase text-[#F4EFE7] leading-[1.1] sm:leading-[1.05] drop-shadow-2xl">
-                  {activeScene.title} <br />
-                  <span className="text-[#D6A35D] font-light">{activeScene.subtitle}</span>
-                </h1>
-              </div>
+            {/* Editorial Heading */}
+            <div className="animate-fadeInUp delay-100">
+              <h1 className="font-serif text-3xl xs:text-4xl sm:text-6xl lg:text-7xl font-bold tracking-[0.1em] sm:tracking-[0.12em] uppercase text-[#F4EFE7] leading-[1.1] sm:leading-[1.05] drop-shadow-2xl">
+                {activeScene.title} <br />
+                <span className="text-[#D6A35D] font-light">{activeScene.subtitle}</span>
+              </h1>
+            </div>
 
-              {/* Description Paragraph */}
-              <p className="animate-fadeInUp delay-200 text-xs sm:text-sm text-[#F4EFE7]/90 font-light leading-relaxed max-w-md tracking-wide line-clamp-3 sm:line-clamp-none">
-                {activeScene.description}
-              </p>
+            {/* Description Paragraph */}
+            <p className="animate-fadeInUp delay-200 text-xs sm:text-sm text-[#F4EFE7]/90 font-light leading-relaxed max-w-md tracking-wide line-clamp-3 sm:line-clamp-none">
+              {activeScene.description}
+            </p>
 
-              {/* Action Buttons */}
-              <div className="animate-fadeInUp delay-300 pt-2 flex flex-col xs:flex-row items-stretch xs:items-center gap-2.5 sm:gap-3">
-                <button
-                  onClick={() => setSelectedNotesProduct(primaryProduct)}
-                  className="bg-[#211815]/90 hover:bg-[#9A5C24] text-[#F4EFE7] text-[11px] sm:text-xs font-semibold px-5 py-3 sm:px-6 sm:py-3.5 tracking-[0.15em] sm:tracking-[0.18em] uppercase transition-all duration-300 border border-[#D6A35D]/50 backdrop-blur-md shadow-lg flex items-center justify-center gap-2"
-                >
-                  <Info className="w-3.5 h-3.5 text-[#D6A35D]" />
-                  <span>{activeScene.ctaText || 'DISCOVER NO. 07'}</span>
-                </button>
+            {/* Action Buttons */}
+            <div className="animate-fadeInUp delay-300 pt-2 flex flex-col xs:flex-row items-stretch xs:items-center gap-2.5 sm:gap-3">
+              <button
+                onClick={() => setSelectedNotesProduct(primaryProduct)}
+                className="bg-[#211815]/90 hover:bg-[#9A5C24] text-[#F4EFE7] text-[11px] sm:text-xs font-semibold px-5 py-3 sm:px-6 sm:py-3.5 tracking-[0.15em] sm:tracking-[0.18em] uppercase transition-all duration-300 border border-[#D6A35D]/50 backdrop-blur-md shadow-lg flex items-center justify-center gap-2"
+              >
+                <Info className="w-3.5 h-3.5 text-[#D6A35D]" />
+                <span>{activeScene.ctaText || 'DISCOVER NO. 07'}</span>
+              </button>
 
-                <button
-                  onClick={(e) => handleAddToCart(primaryProduct, e)}
-                  className="bg-[#9A5C24] hover:bg-[#D6A35D] text-white text-[11px] sm:text-xs font-semibold px-6 py-3 sm:px-7 sm:py-3.5 tracking-[0.15em] sm:tracking-[0.18em] uppercase transition-all duration-300 shadow-xl border border-white/10 flex items-center justify-center gap-2"
-                >
-                  <ShoppingBag className="w-3.5 h-3.5" />
-                  <span>SHOP NOW</span>
-                </button>
-              </div>
-
+              <button
+                onClick={(e) => handleAddToCart(primaryProduct, e)}
+                className="bg-[#9A5C24] hover:bg-[#D6A35D] text-white text-[11px] sm:text-xs font-semibold px-6 py-3 sm:px-7 sm:py-3.5 tracking-[0.15em] sm:tracking-[0.18em] uppercase transition-all duration-300 shadow-xl border border-white/10 flex items-center justify-center gap-2"
+              >
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span>SHOP NOW</span>
+              </button>
             </div>
 
           </div>
 
-          {/* RIGHT SIDE VERTICAL LABEL */}
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 z-30 hidden lg:block tracking-[0.4em] font-serif text-[11px] text-[#F4EFE7]/60 uppercase select-none pointer-events-none [writing-mode:vertical-rl] rotate-180">
-            MUNAAZ ESSENCE
-          </div>
-
-          {/* RIGHT SIDE FLOATING BUTTON: VIEW SCENE > */}
-          <div className="absolute right-3 sm:right-16 top-1/2 -translate-y-1/2 z-30">
-            <button
-              onClick={nextScene}
-              className="group px-3 py-2 sm:px-5 sm:py-3 bg-black/70 hover:bg-[#9A5C24] text-[#F4EFE7] text-[10px] sm:text-xs font-bold tracking-[0.15em] sm:tracking-[0.2em] uppercase backdrop-blur-md border border-[#D6A35D]/50 transition-all shadow-2xl flex items-center gap-1.5 sm:gap-2 hover:scale-105"
-            >
-              <span className="hidden xs:inline">VIEW SCENE</span>
-              <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#D6A35D] group-hover:text-white group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
-
-          {/* BOTTOM CENTER NUMERICAL SLIDE INDICATORS (01  02  03  04  05) */}
-          <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 sm:gap-5 bg-black/80 backdrop-blur-md px-4 py-2 sm:px-6 sm:py-2.5 border border-white/15 shadow-2xl">
-            {scenes.map((scene, idx) => (
-              <button
-                key={scene.id}
-                onClick={() => scrollToScene(idx)}
-                className={`text-[10px] sm:text-xs font-mono font-bold tracking-widest transition-all duration-300 relative py-1 ${
-                  idx === currentSceneIndex
-                    ? 'text-[#D6A35D] scale-110'
-                    : 'text-[#F4EFE7]/50 hover:text-white'
-                }`}
-                aria-label={`Go to scene ${idx + 1}`}
-              >
-                <span>{scene.sceneNumber || `0${idx + 1}`}</span>
-                {idx === currentSceneIndex && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#D6A35D] shadow-[0_0_8px_#D6A35D]" />
-                )}
-              </button>
-            ))}
-          </div>
-
         </div>
+
+        {/* RIGHT SIDE VERTICAL LABEL */}
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 z-30 hidden lg:block tracking-[0.4em] font-serif text-[11px] text-[#F4EFE7]/60 uppercase select-none pointer-events-none [writing-mode:vertical-rl] rotate-180">
+          MUNAAZ ESSENCE
+        </div>
+
+        {/* RIGHT SIDE FLOATING BUTTON: VIEW SCENE > */}
+        <div className="absolute right-3 sm:right-16 top-1/2 -translate-y-1/2 z-30">
+          <button
+            onClick={nextScene}
+            className="group px-3 py-2 sm:px-5 sm:py-3 bg-black/70 hover:bg-[#9A5C24] text-[#F4EFE7] text-[10px] sm:text-xs font-bold tracking-[0.15em] sm:tracking-[0.2em] uppercase backdrop-blur-md border border-[#D6A35D]/50 transition-all shadow-2xl flex items-center gap-1.5 sm:gap-2 hover:scale-105"
+          >
+            <span className="hidden xs:inline">VIEW SCENE</span>
+            <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#D6A35D] group-hover:text-white group-hover:translate-x-1 transition-transform" />
+          </button>
+        </div>
+
+        {/* BOTTOM CENTER NUMERICAL SLIDE INDICATORS (01  02  03  04  05) */}
+        <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 sm:gap-5 bg-black/80 backdrop-blur-md px-4 py-2 sm:px-6 sm:py-2.5 border border-white/15 shadow-2xl">
+          {scenes.map((scene, idx) => (
+            <button
+              key={scene.id}
+              onClick={() => changeScene(idx)}
+              className={`text-[10px] sm:text-xs font-mono font-bold tracking-widest transition-all duration-300 relative py-1 ${
+                idx === currentSceneIndex
+                  ? 'text-[#D6A35D] scale-110'
+                  : 'text-[#F4EFE7]/50 hover:text-white'
+              }`}
+              aria-label={`Go to scene ${idx + 1}`}
+            >
+              <span>{scene.sceneNumber || `0${idx + 1}`}</span>
+              {idx === currentSceneIndex && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#D6A35D] shadow-[0_0_8px_#D6A35D]" />
+              )}
+            </button>
+          ))}
+        </div>
+
       </div>
 
       {/* ========================================================= */}
@@ -543,11 +510,10 @@ export const FragranceSection: React.FC = () => {
 
                 {/* Image Container with Hover Zoom */}
                 <div className="relative aspect-[3/4] w-full bg-[#171411] overflow-hidden">
-                  <Image
+                  <img
                     src={fragrance.images[0]}
                     alt={fragrance.name}
-                    fill
-                    className="object-cover object-center group-hover:scale-108 transition-transform duration-700 filter brightness-95 group-hover:brightness-105"
+                    className="w-full h-full object-cover object-center group-hover:scale-108 transition-transform duration-700 filter brightness-95 group-hover:brightness-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#1E1916] via-transparent to-transparent opacity-80" />
 

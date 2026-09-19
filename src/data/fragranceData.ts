@@ -214,7 +214,7 @@ export const DEFAULT_FRAGRANCE_PRODUCTS: FragranceProduct[] = [
   }
 ];
 
-const FRAGRANCE_STORAGE_KEY = 'munaaz_fragrance_store_v3';
+const FRAGRANCE_STORAGE_KEY = 'munaaz_fragrance_store_v5';
 
 export function getStoredFragranceData(): FragranceDataStore {
   if (typeof window === 'undefined') {
@@ -234,9 +234,10 @@ export function getStoredFragranceData(): FragranceDataStore {
       };
     }
     const parsed = JSON.parse(raw);
+    const validScenes = Array.isArray(parsed.scenes) && parsed.scenes.length === 5 ? parsed.scenes : DEFAULT_FRAGRANCE_SCENES;
     return {
       hero: { ...DEFAULT_FRAGRANCE_HERO, ...(parsed.hero || {}) },
-      scenes: Array.isArray(parsed.scenes) && parsed.scenes.length > 0 ? parsed.scenes : DEFAULT_FRAGRANCE_SCENES,
+      scenes: validScenes,
       products: Array.isArray(parsed.products) && parsed.products.length > 0 ? parsed.products : DEFAULT_FRAGRANCE_PRODUCTS
     };
   } catch (e) {
