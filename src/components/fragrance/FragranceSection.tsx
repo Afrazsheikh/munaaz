@@ -1,31 +1,14 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Sparkles, ShoppingBag, Info, Edit, Check, Star, ChevronRight } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Sparkles, ShoppingBag, Info, Edit, Check, Star, ChevronRight, RotateCcw } from 'lucide-react';
 import { FragranceDataStore, FragranceProduct, FragranceScene } from '@/types/fragrance';
 import { fragranceService } from '@/services/fragranceService';
 import { FragranceNotesModal } from './FragranceNotesModal';
 import { FragranceAdminModal } from './FragranceAdminModal';
-import { Fragrance3DBottleCanvas } from './Fragrance3DBottleCanvas';
+import { Fragrance3DOrbitingHero } from './Fragrance3DOrbitingHero';
 import { useCart } from '@/context/CartContext';
 import { Product } from '@/types/product';
-
-interface Particle3D {
-  x: number;
-  y: number;
-  z: number;
-  size: number;
-  speedY: number;
-  speedX: number;
-  speedZ: number;
-  opacity: number;
-  rotation: number;
-  rotationSpeed: number;
-  color: string;
-  type: string;
-  wobble: number;
-  wobbleSpeed: number;
-}
 
 interface ProductCard3DProps {
   fragrance: FragranceProduct;
@@ -40,7 +23,7 @@ const Fragrance3DProductCard: React.FC<ProductCard3DProps> = ({
   onAddToCart,
   isAdded
 }) => {
-  const cardRef = useRef<HTMLDivElement>(null);
+  const cardRef = React.useRef<HTMLDivElement>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0, glareX: 50, glareY: 50 });
   const [isHovered, setIsHovered] = useState(false);
 
@@ -53,8 +36,8 @@ const Fragrance3DProductCard: React.FC<ProductCard3DProps> = ({
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
 
-    const rotateX = -((y - centerY) / centerY) * 12;
-    const rotateY = ((x - centerX) / centerX) * 12;
+    const rotateX = -((y - centerY) / centerY) * 10;
+    const rotateY = ((x - centerX) / centerX) * 10;
 
     const glareX = (x / rect.width) * 100;
     const glareY = (y / rect.height) * 100;
@@ -84,9 +67,9 @@ const Fragrance3DProductCard: React.FC<ProductCard3DProps> = ({
     >
       {/* 3D Dynamic Glare Sheen Overlay */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-35 transition-opacity duration-300 z-20"
+        className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-30 transition-opacity duration-300 z-20"
         style={{
-          background: `radial-gradient(circle at ${tilt.glareX}% ${tilt.glareY}%, rgba(255,255,255,0.7) 0%, rgba(214,163,93,0.2) 40%, transparent 70%)`
+          background: `radial-gradient(circle at ${tilt.glareX}% ${tilt.glareY}%, rgba(255,255,255,0.6) 0%, rgba(214,163,93,0.15) 40%, transparent 70%)`
         }}
       />
 
@@ -213,12 +196,6 @@ export const FragranceSection: React.FC = () => {
   const [isZoomingIn, setIsZoomingIn] = useState(false);
   const [textKey, setTextKey] = useState(0);
 
-  // Mouse Parallax & Motion
-  const heroRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [targetMouse, setTargetMouse] = useState({ x: 0, y: 0 });
-
   const { addItem } = useCart();
 
   const scenes = storeData.scenes && storeData.scenes.length > 0 ? storeData.scenes : fragranceService.getFragranceData().scenes;
@@ -229,16 +206,13 @@ export const FragranceSection: React.FC = () => {
   const changeScene = useCallback((newIndex: number) => {
     if (newIndex === currentSceneIndex || isZoomingIn || scenes.length === 0) return;
 
-    // Phase 1: Camera zooms into bottle opening/liquid
     setIsZoomingIn(true);
 
     setTimeout(() => {
-      // Phase 2: Switch scene and re-trigger text entrance
       setCurrentSceneIndex(newIndex);
       setTextKey((prev) => prev + 1);
 
       setTimeout(() => {
-        // Phase 3: Camera pulls back slightly as new scene sharpens inside bottle
         setIsZoomingIn(false);
       }, 400);
     }, 450);
@@ -250,183 +224,13 @@ export const FragranceSection: React.FC = () => {
     changeScene(nextIdx);
   }, [currentSceneIndex, scenes.length, changeScene]);
 
-  // Auto-play slideshow every 6 seconds
+  // Auto-play slideshow every 7 seconds
   useEffect(() => {
     const timer = setInterval(() => {
       nextScene();
-    }, 6000);
+    }, 7000);
     return () => clearInterval(timer);
   }, [nextScene]);
-
-  // Mouse Parallax Offset
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!heroRef.current) return;
-    const rect = heroRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = ((e.clientY - rect.top) / rect.height) * 2 - 1;
-    setTargetMouse({ x, y });
-  }, []);
-
-  useEffect(() => {
-    let animId: number;
-    const loop = () => {
-      setMousePos((prev) => ({
-        x: prev.x + (targetMouse.x - prev.x) * 0.05,
-        y: prev.y + (targetMouse.y - prev.y) * 0.05
-      }));
-      animId = requestAnimationFrame(loop);
-    };
-    loop();
-    return () => cancelAnimationFrame(animId);
-  }, [targetMouse]);
-
-  // High-DPI 3D Canvas Motion Physics Engine (Z-Axis Depth Perspective)
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !activeScene) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return;
-
-    let animId: number;
-
-    const setupCanvasResolution = () => {
-      const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-      const displayWidth = canvas.parentElement?.clientWidth || window.innerWidth;
-      const displayHeight = canvas.parentElement?.clientHeight || window.innerHeight;
-
-      canvas.width = displayWidth * dpr;
-      canvas.height = displayHeight * dpr;
-      ctx.scale(dpr, dpr);
-
-      return { width: displayWidth, height: displayHeight };
-    };
-
-    let { width, height } = setupCanvasResolution();
-
-    const handleResize = () => {
-      const res = setupCanvasResolution();
-      width = res.width;
-      height = res.height;
-    };
-    window.addEventListener('resize', handleResize);
-
-    const count = width < 768 ? 24 : 52;
-
-    const particles: Particle3D[] = Array.from({ length: count }, () => {
-      const pType = activeScene.particleType || 'pure';
-      return {
-        x: Math.random() * width,
-        y: Math.random() * height,
-        z: Math.random() * 500 - 250, // 3D Depth range -250px to +250px
-        size: Math.random() * (pType === 'citrus' ? 14 : 6) + 4,
-        speedY: -(Math.random() * 0.5 + 0.2),
-        speedX: (Math.random() - 0.5) * 0.4,
-        speedZ: (Math.random() - 0.5) * 0.8,
-        opacity: Math.random() * 0.6 + 0.3,
-        rotation: Math.random() * Math.PI * 2,
-        rotationSpeed: (Math.random() - 0.5) * 0.015,
-        wobble: Math.random() * Math.PI * 2,
-        wobbleSpeed: Math.random() * 0.03 + 0.01,
-        color:
-          pType === 'citrus'
-            ? Math.random() > 0.5 ? '#E6C594' : '#D6A35D'
-            : pType === 'petals'
-            ? Math.random() > 0.5 ? '#F4EFE7' : '#C18A60'
-            : pType === 'spices'
-            ? Math.random() > 0.5 ? '#9A5C24' : '#3A2418'
-            : '#F4EFE7',
-        type: pType
-      };
-    });
-
-    const render = () => {
-      ctx.clearRect(0, 0, width, height);
-
-      particles.forEach((p) => {
-        p.wobble += p.wobbleSpeed;
-        p.x += p.speedX + Math.sin(p.wobble) * 0.5 + mousePos.x * 0.25;
-        p.y += p.type === 'petals' ? Math.abs(p.speedY) * 0.7 : p.speedY;
-        p.z += p.speedZ;
-        p.rotation += p.rotationSpeed;
-
-        if (p.y < -30) p.y = height + 30;
-        if (p.y > height + 30) p.y = -30;
-        if (p.x < -30) p.x = width + 30;
-        if (p.x > width + 30) p.x = -30;
-        if (p.z < -250) p.z = 250;
-        if (p.z > 250) p.z = -250;
-
-        // 3D Perspective Projection Matrix
-        const perspective = 400;
-        const scale = perspective / (perspective + p.z);
-        const projX = (p.x - width / 2) * scale + width / 2;
-        const projY = (p.y - height / 2) * scale + height / 2;
-        const projSize = p.size * scale;
-
-        ctx.save();
-        ctx.translate(projX, projY);
-        ctx.rotate(p.rotation);
-        ctx.globalAlpha = Math.min(Math.max(p.opacity * scale, 0.1), 1.0);
-
-        if (p.type === 'citrus') {
-          const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, projSize);
-          grad.addColorStop(0, 'rgba(255, 235, 195, 0.95)');
-          grad.addColorStop(0.5, p.color);
-          grad.addColorStop(1, 'rgba(154, 92, 36, 0)');
-          ctx.beginPath();
-          ctx.arc(0, 0, projSize, 0, Math.PI * 2);
-          ctx.fillStyle = grad;
-          ctx.fill();
-
-          ctx.beginPath();
-          ctx.arc(0, 0, projSize * 0.85, 0, Math.PI * 2);
-          ctx.strokeStyle = 'rgba(255, 248, 235, 0.4)';
-          ctx.lineWidth = 1;
-          ctx.stroke();
-
-        } else if (p.type === 'petals') {
-          ctx.beginPath();
-          ctx.moveTo(0, -projSize * 2);
-          ctx.bezierCurveTo(projSize * 1.5, -projSize, projSize * 1.5, projSize, 0, projSize * 2);
-          ctx.bezierCurveTo(-projSize * 1.5, projSize, -projSize * 1.5, -projSize, 0, -projSize * 2);
-          const pGrad = ctx.createLinearGradient(0, -projSize * 2, 0, projSize * 2);
-          pGrad.addColorStop(0, 'rgba(244, 239, 231, 0.85)');
-          pGrad.addColorStop(1, 'rgba(193, 138, 96, 0.4)');
-          ctx.fillStyle = pGrad;
-          ctx.fill();
-
-        } else {
-          const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, projSize);
-          grad.addColorStop(0, 'rgba(255, 252, 245, 0.95)');
-          grad.addColorStop(0.4, p.color);
-          grad.addColorStop(1, 'rgba(58, 36, 24, 0)');
-          ctx.beginPath();
-          ctx.arc(0, 0, projSize, 0, Math.PI * 2);
-          ctx.fillStyle = grad;
-          ctx.fill();
-
-          ctx.beginPath();
-          ctx.arc(-projSize * 0.3, -projSize * 0.3, projSize * 0.25, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-          ctx.fill();
-        }
-
-        ctx.restore();
-      });
-
-      animId = requestAnimationFrame(render);
-    };
-
-    render();
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(animId);
-    };
-  }, [activeScene, mousePos]);
 
   const primaryProduct = products[0] || {
     id: 'frag-noir',
@@ -498,22 +302,16 @@ export const FragranceSection: React.FC = () => {
       </div>
 
       {/* ========================================================= */}
-      {/* 1. 100DVH FULL-BLEED 4K CINEMATIC MACRO CAMERA TRAVEL HERO*/}
+      {/* 1. 100DVH 360-DEGREE ANAMORPHIC ORBITING HERO SECTION     */}
       {/* ========================================================= */}
-      <div
-        ref={heroRef}
-        onMouseMove={handleMouseMove}
-        className="relative w-full h-[100dvh] min-h-[500px] sm:min-h-[620px] flex items-center justify-between overflow-hidden transform-gpu"
-      >
-        {/* Full-Bleed 4K Edge-to-Edge Macro Visual Layers with Camera Zoom Travel */}
+      <div className="relative w-full h-[100dvh] min-h-[500px] sm:min-h-[620px] flex items-center justify-between overflow-hidden transform-gpu">
+        
+        {/* Background Full-Bleed Anamorphic Macro Visual Layer */}
         <div className="absolute inset-0 z-0">
           <div
             className={`relative w-full h-full transition-transform duration-700 ease-out ${
               isZoomingIn ? 'scale-135 blur-sm' : 'scale-100 blur-none'
             }`}
-            style={{
-              transform: `scale(${isZoomingIn ? 1.38 : 1.04}) translate(${mousePos.x * -12}px, ${mousePos.y * -12}px)`
-            }}
           >
             {/* Desktop 4K Macro Image */}
             <img
@@ -529,51 +327,25 @@ export const FragranceSection: React.FC = () => {
             />
           </div>
 
-          {/* Golden Amber Liquid Refraction Overlay */}
-          <div
-            className="absolute inset-0 opacity-75 pointer-events-none transition-all duration-700"
-            style={{
-              background: `radial-gradient(circle at ${40 + mousePos.x * 15}% ${50 + mousePos.y * 15}%, rgba(214, 163, 93, 0.28) 0%, rgba(23, 20, 17, 0.75) 65%, rgba(23, 20, 17, 0.95) 100%)`
-            }}
-          />
+          {/* Golden Amber Refraction Lighting Shader */}
+          <div className="absolute inset-0 opacity-80 pointer-events-none bg-[radial-gradient(ellipse_at_center,_rgba(214,163,93,0.3)_0%,_rgba(23,20,17,0.85)_65%,_rgba(23,20,17,0.98)_100%)]" />
 
-          {/* PHASE 2 OVERLAY: BOTTLE NECK & CAP RIM SHIMMER (Shown when at Scene 02) */}
-          {activeScene.id === 'scene-2' && (
-            <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center p-4">
-              <div className="w-[200px] h-[200px] xs:w-[260px] xs:h-[260px] sm:w-[480px] sm:h-[480px] max-w-[75vw] max-h-[75vw] border-[8px] sm:border-[16px] border-[#D6A35D]/30 rounded-full shadow-[inset_0_0_120px_rgba(214,163,93,0.4)] animate-pulse" />
-              <div className="absolute top-10 sm:top-12 px-3 py-1 sm:px-6 sm:py-2 bg-black/80 backdrop-blur-md border border-[#D6A35D]/50 text-[8px] sm:text-[10px] font-mono tracking-[0.15em] sm:tracking-[0.3em] text-[#D6A35D] uppercase text-center max-w-[90vw]">
-                GLASS BOTTLE NECK OPENING · ENTERING LIQUID
-              </div>
-            </div>
-          )}
-
-          {/* PHASES 3, 4, 5 OVERLAY: INSIDE THE GLASS BOTTLE CONTOUR FRAMING */}
-          {['scene-3', 'scene-4', 'scene-5'].includes(activeScene.id) && (
-            <div className="absolute inset-0 z-10 pointer-events-none border-x-[8px] xs:border-x-[16px] sm:border-x-[40px] border-white/10 shadow-[inset_0_0_100px_rgba(214,163,93,0.35)]" />
-          )}
-
-          {/* Left Dark Gradient Overlay for Maximum Text Contrast */}
+          {/* Left Dark Gradient Overlay for Maximum Text Readability */}
           <div className="absolute inset-y-0 left-0 w-full sm:w-2/3 bg-gradient-to-r from-[#171411]/95 via-[#171411]/85 sm:via-[#171411]/70 to-transparent pointer-events-none" />
         </div>
 
-        {/* High-DPI 3D Canvas Motion Overlay (Bubbles, Citrus Orbs, Petals with 3D Depth) */}
-        <canvas
-          ref={canvasRef}
-          className="absolute inset-0 z-10 pointer-events-none w-full h-full"
-        />
+        {/* 360-Degree Anamorphic Orbiting Hero Canvas Engine */}
+        <div className="absolute inset-0 z-10 w-full h-full">
+          <Fragrance3DOrbitingHero
+            accentColor={activeScene.accentColor}
+            activeSceneId={activeScene.id}
+          />
+        </div>
 
-        {/* Cursor Glass Reflection Highlights */}
-        <div
-          className="absolute inset-0 z-15 pointer-events-none opacity-30 bg-gradient-to-tr from-transparent via-white/10 to-transparent transition-transform duration-500"
-          style={{
-            transform: `translateX(${mousePos.x * 35}px) translateY(${mousePos.y * 25}px)`
-          }}
-        />
-
-        {/* LEFT SIDE OVERLAY */}
-        <div className="relative z-20 max-w-7xl mx-auto px-3 xs:px-6 sm:px-10 lg:px-16 w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-center pt-6 sm:pt-0">
+        {/* LEFT SIDE CONTENT OVERLAY */}
+        <div className="relative z-20 max-w-7xl mx-auto px-3 xs:px-6 sm:px-10 lg:px-16 w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-center pt-6 sm:pt-0 pointer-events-none">
           
-          <div key={textKey} className="lg:col-span-7 space-y-3 sm:space-y-6 text-left max-w-xl sm:max-w-none">
+          <div key={textKey} className="lg:col-span-7 space-y-3 sm:space-y-6 text-left max-w-xl sm:max-w-none pointer-events-auto">
             
             {/* Category Pill Badge */}
             <div className="animate-fadeInUp">
@@ -617,13 +389,6 @@ export const FragranceSection: React.FC = () => {
 
           </div>
 
-          {/* RIGHT SIDE INTERACTIVE 3D GLASS BOTTLE CANVAS (Rendered on Scene 01 & Scene 05) */}
-          {(activeScene.id === 'scene-1' || activeScene.id === 'scene-5') && (
-            <div className="hidden lg:col-span-5 lg:flex justify-center items-center z-20 animate-fadeIn">
-              <Fragrance3DBottleCanvas accentColor={activeScene.accentColor} />
-            </div>
-          )}
-
         </div>
 
         {/* RIGHT SIDE VERTICAL LABEL */}
@@ -631,7 +396,7 @@ export const FragranceSection: React.FC = () => {
           MUNAAZ ESSENCE
         </div>
 
-        {/* FLOATING BUTTON: VIEW SCENE > (Bottom right on mobile, middle right on desktop) */}
+        {/* FLOATING BUTTON: NEXT SCENE > */}
         <div className="absolute bottom-16 right-3 sm:top-1/2 sm:-translate-y-1/2 sm:bottom-auto sm:right-16 z-30">
           <button
             onClick={nextScene}
@@ -642,7 +407,7 @@ export const FragranceSection: React.FC = () => {
           </button>
         </div>
 
-        {/* BOTTOM CENTER NUMERICAL SLIDE INDICATORS (01  02  03  04  05) */}
+        {/* BOTTOM CENTER NUMERICAL SLIDE INDICATORS (01  02  03  04) */}
         <div className="absolute bottom-3 sm:bottom-8 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 sm:gap-5 bg-black/80 backdrop-blur-md px-3 py-1.5 sm:px-6 sm:py-2.5 border border-white/15 shadow-2xl max-w-[95vw]">
           {scenes.map((scene, idx) => (
             <button
