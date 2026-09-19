@@ -26,9 +26,36 @@ export const FragranceTeaserCard: React.FC = () => {
     }
   }, []);
 
+  const [tilt, setTilt] = React.useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const rotateX = -((y - rect.height / 2) / (rect.height / 2)) * 8;
+    const rotateY = ((x - rect.width / 2) / (rect.width / 2)) * 8;
+    setTilt({ x: rotateX, y: rotateY });
+  };
+
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-12">
-      <div className="relative bg-[#1C1412] text-[#FFF9F1] overflow-hidden p-8 sm:p-12 lg:p-16 border border-[#C18A60]/40 shadow-2xl group">
+      <div
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => {
+          setIsHovered(false);
+          setTilt({ x: 0, y: 0 });
+        }}
+        className="relative bg-[#1C1412] text-[#FFF9F1] overflow-hidden p-8 sm:p-12 lg:p-16 border border-[#C18A60]/40 shadow-2xl group transition-transform duration-300 transform-gpu"
+        style={{
+          perspective: '1000px',
+          transform: isHovered
+            ? `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1.01, 1.01, 1.01)`
+            : 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)',
+          transformStyle: 'preserve-3d'
+        }}
+      >
         
         {/* Background Ambient Glow & Texture */}
         <div className="absolute inset-0 z-0">
@@ -91,7 +118,10 @@ export const FragranceTeaserCard: React.FC = () => {
 
           {/* Right Perfume Visual Thumbnail (5 Cols) */}
           <div className="lg:col-span-5 relative flex justify-center">
-            <div className="relative w-56 sm:w-64 aspect-[3/4] bg-[#2A1D18]/80 border border-[#C18A60]/30 overflow-hidden shadow-2xl p-4 group-hover:border-[#C18A60] transition-colors duration-500">
+            <div
+              className="relative w-56 sm:w-64 aspect-[3/4] bg-[#2A1D18]/80 border border-[#C18A60]/30 overflow-hidden shadow-2xl p-4 group-hover:border-[#C18A60] transition-transform duration-500"
+              style={{ transform: 'translateZ(30px)' }}
+            >
               <Image
                 src={heroData.bottleImage}
                 alt="MUNAAZ Eau de Parfum Visual"

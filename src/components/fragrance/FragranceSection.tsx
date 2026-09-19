@@ -6,15 +6,18 @@ import { FragranceDataStore, FragranceProduct, FragranceScene } from '@/types/fr
 import { fragranceService } from '@/services/fragranceService';
 import { FragranceNotesModal } from './FragranceNotesModal';
 import { FragranceAdminModal } from './FragranceAdminModal';
+import { Fragrance3DBottleCanvas } from './Fragrance3DBottleCanvas';
 import { useCart } from '@/context/CartContext';
 import { Product } from '@/types/product';
 
-interface Particle {
+interface Particle3D {
   x: number;
   y: number;
+  z: number;
   size: number;
   speedY: number;
   speedX: number;
+  speedZ: number;
   opacity: number;
   rotation: number;
   rotationSpeed: number;
@@ -23,6 +26,180 @@ interface Particle {
   wobble: number;
   wobbleSpeed: number;
 }
+
+interface ProductCard3DProps {
+  fragrance: FragranceProduct;
+  onExploreNotes: (p: FragranceProduct) => void;
+  onAddToCart: (p: FragranceProduct, e: React.MouseEvent) => void;
+  isAdded: boolean;
+}
+
+const Fragrance3DProductCard: React.FC<ProductCard3DProps> = ({
+  fragrance,
+  onExploreNotes,
+  onAddToCart,
+  isAdded
+}) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [tilt, setTilt] = useState({ x: 0, y: 0, glareX: 50, glareY: 50 });
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const rotateX = -((y - centerY) / centerY) * 12;
+    const rotateY = ((x - centerX) / centerX) * 12;
+
+    const glareX = (x / rect.width) * 100;
+    const glareY = (y / rect.height) * 100;
+
+    setTilt({ x: rotateX, y: rotateY, glareX, glareY });
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    setTilt({ x: 0, y: 0, glareX: 50, glareY: 50 });
+  };
+
+  return (
+    <div
+      ref={cardRef}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className="group relative bg-[#1E1916] border border-[#3A2418] hover:border-[#D6A35D]/60 transition-all duration-300 flex flex-col justify-between overflow-hidden shadow-xl transform-gpu select-none"
+      style={{
+        perspective: '1000px',
+        transform: isHovered
+          ? `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1.03, 1.03, 1.03)`
+          : 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)',
+        transformStyle: 'preserve-3d'
+      }}
+    >
+      {/* 3D Dynamic Glare Sheen Overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-35 transition-opacity duration-300 z-20"
+        style={{
+          background: `radial-gradient(circle at ${tilt.glareX}% ${tilt.glareY}%, rgba(255,255,255,0.7) 0%, rgba(214,163,93,0.2) 40%, transparent 70%)`
+        }}
+      />
+
+      {/* Badge Overlay */}
+      {fragrance.badge && (
+        <div
+          className="absolute top-3 left-3 z-10 px-2.5 py-1 bg-[#171411]/90 backdrop-blur-md border border-[#D6A35D]/40 text-[9px] font-bold tracking-[0.2em] text-[#D6A35D] uppercase shadow-lg"
+          style={{ transform: 'translateZ(25px)' }}
+        >
+          {fragrance.badge}
+        </div>
+      )}
+
+      {/* Rating Badge */}
+      <div
+        className="absolute top-3 right-3 z-10 px-2 py-1 bg-black/70 backdrop-blur-md text-[10px] font-semibold text-white flex items-center gap-1 border border-white/10 shadow-lg"
+        style={{ transform: 'translateZ(25px)' }}
+      >
+        <Star className="w-3 h-3 text-[#D6A35D] fill-current" />
+        <span>{fragrance.rating}</span>
+      </div>
+
+      {/* Image Container with 3D Hover Zoom */}
+      <div className="relative aspect-[3/4] w-full bg-[#171411] overflow-hidden">
+        <img
+          src={fragrance.images[0]}
+          alt={fragrance.name}
+          className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-700 filter brightness-95 group-hover:brightness-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#1E1916] via-transparent to-transparent opacity-80" />
+
+        {/* "EXPLORE NOTES" Hover Overlay */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/50 backdrop-blur-[2px] p-4">
+          <button
+            onClick={() => onExploreNotes(fragrance)}
+            className="px-5 py-2.5 bg-[#F4EFE7] hover:bg-[#D6A35D] text-[#171411] hover:text-white text-xs font-semibold tracking-[0.15em] uppercase shadow-2xl transition-all duration-300 flex items-center gap-2 transform group-hover:translate-z-10"
+            style={{ transform: 'translateZ(30px)' }}
+          >
+            <Info className="w-3.5 h-3.5" />
+            <span>EXPLORE NOTES</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Card Info */}
+      <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
+        <div>
+          <div className="flex items-center justify-between text-[10px] text-[#D6A35D] font-mono tracking-widest uppercase mb-1">
+            <span>{fragrance.subtitle}</span>
+            <span>{fragrance.size}</span>
+          </div>
+
+          <h3 className="font-serif text-2xl font-bold tracking-wider text-[#F4EFE7] group-hover:text-[#D6A35D] transition-colors">
+            {fragrance.name}
+          </h3>
+
+          <p className="text-xs text-[#F4EFE7]/75 font-light line-clamp-2 mt-2 leading-relaxed">
+            {fragrance.description}
+          </p>
+
+          {/* Notes Pills */}
+          <div className="pt-3 flex flex-wrap gap-1.5">
+            {fragrance.notes.top.slice(0, 2).map((note) => (
+              <span key={note} className="px-2 py-0.5 bg-[#171411] text-[10px] text-[#F4EFE7]/80 border border-[#3A2418]">
+                {note}
+              </span>
+            ))}
+            {fragrance.notes.heart.slice(0, 1).map((note) => (
+              <span key={note} className="px-2 py-0.5 bg-[#9A5C24]/30 text-[10px] text-[#D6A35D] border border-[#9A5C24]/60">
+                {note}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Price & Cart Action */}
+        <div className="pt-4 border-t border-[#3A2418] flex items-center justify-between gap-3">
+          <div>
+            <div className="font-serif font-bold text-lg text-[#F4EFE7]">
+              ₹{fragrance.priceINR.toLocaleString()}
+            </div>
+            <div className="text-[10px] font-sans text-[#D6A35D]">
+              ${fragrance.priceUSD} USD
+            </div>
+          </div>
+
+          <button
+            onClick={(e) => onAddToCart(fragrance, e)}
+            className={`px-4 py-2.5 text-[11px] font-semibold tracking-[0.15em] uppercase transition-all flex items-center gap-1.5 ${
+              isAdded
+                ? 'bg-emerald-700 text-white'
+                : 'bg-[#9A5C24] hover:bg-[#D6A35D] text-white shadow-md'
+            }`}
+          >
+            {isAdded ? (
+              <>
+                <Check className="w-3.5 h-3.5" />
+                <span>ADDED</span>
+              </>
+            ) : (
+              <>
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span>ADD TO BAG</span>
+              </>
+            )}
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  );
+};
 
 export const FragranceSection: React.FC = () => {
   // Synchronous state initialization to prevent initial null render / blank flash
@@ -103,7 +280,7 @@ export const FragranceSection: React.FC = () => {
     return () => cancelAnimationFrame(animId);
   }, [targetMouse]);
 
-  // High-DPI 4K Canvas Motion Physics Engine
+  // High-DPI 3D Canvas Motion Physics Engine (Z-Axis Depth Perspective)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !activeScene) return;
@@ -136,16 +313,18 @@ export const FragranceSection: React.FC = () => {
     };
     window.addEventListener('resize', handleResize);
 
-    const count = width < 768 ? 22 : 48;
+    const count = width < 768 ? 24 : 52;
 
-    const particles: Particle[] = Array.from({ length: count }, () => {
+    const particles: Particle3D[] = Array.from({ length: count }, () => {
       const pType = activeScene.particleType || 'pure';
       return {
         x: Math.random() * width,
         y: Math.random() * height,
-        size: Math.random() * (pType === 'citrus' ? 14 : 6) + 3,
+        z: Math.random() * 500 - 250, // 3D Depth range -250px to +250px
+        size: Math.random() * (pType === 'citrus' ? 14 : 6) + 4,
         speedY: -(Math.random() * 0.5 + 0.2),
         speedX: (Math.random() - 0.5) * 0.4,
+        speedZ: (Math.random() - 0.5) * 0.8,
         opacity: Math.random() * 0.6 + 0.3,
         rotation: Math.random() * Math.PI * 2,
         rotationSpeed: (Math.random() - 0.5) * 0.015,
@@ -170,57 +349,67 @@ export const FragranceSection: React.FC = () => {
         p.wobble += p.wobbleSpeed;
         p.x += p.speedX + Math.sin(p.wobble) * 0.5 + mousePos.x * 0.25;
         p.y += p.type === 'petals' ? Math.abs(p.speedY) * 0.7 : p.speedY;
+        p.z += p.speedZ;
         p.rotation += p.rotationSpeed;
 
         if (p.y < -30) p.y = height + 30;
         if (p.y > height + 30) p.y = -30;
         if (p.x < -30) p.x = width + 30;
         if (p.x > width + 30) p.x = -30;
+        if (p.z < -250) p.z = 250;
+        if (p.z > 250) p.z = -250;
+
+        // 3D Perspective Projection Matrix
+        const perspective = 400;
+        const scale = perspective / (perspective + p.z);
+        const projX = (p.x - width / 2) * scale + width / 2;
+        const projY = (p.y - height / 2) * scale + height / 2;
+        const projSize = p.size * scale;
 
         ctx.save();
-        ctx.translate(p.x, p.y);
+        ctx.translate(projX, projY);
         ctx.rotate(p.rotation);
-        ctx.globalAlpha = p.opacity;
+        ctx.globalAlpha = Math.min(Math.max(p.opacity * scale, 0.1), 1.0);
 
         if (p.type === 'citrus') {
-          const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, p.size);
+          const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, projSize);
           grad.addColorStop(0, 'rgba(255, 235, 195, 0.95)');
           grad.addColorStop(0.5, p.color);
           grad.addColorStop(1, 'rgba(154, 92, 36, 0)');
           ctx.beginPath();
-          ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+          ctx.arc(0, 0, projSize, 0, Math.PI * 2);
           ctx.fillStyle = grad;
           ctx.fill();
 
           ctx.beginPath();
-          ctx.arc(0, 0, p.size * 0.85, 0, Math.PI * 2);
+          ctx.arc(0, 0, projSize * 0.85, 0, Math.PI * 2);
           ctx.strokeStyle = 'rgba(255, 248, 235, 0.4)';
           ctx.lineWidth = 1;
           ctx.stroke();
 
         } else if (p.type === 'petals') {
           ctx.beginPath();
-          ctx.moveTo(0, -p.size * 2);
-          ctx.bezierCurveTo(p.size * 1.5, -p.size, p.size * 1.5, p.size, 0, p.size * 2);
-          ctx.bezierCurveTo(-p.size * 1.5, p.size, -p.size * 1.5, -p.size, 0, -p.size * 2);
-          const pGrad = ctx.createLinearGradient(0, -p.size * 2, 0, p.size * 2);
+          ctx.moveTo(0, -projSize * 2);
+          ctx.bezierCurveTo(projSize * 1.5, -projSize, projSize * 1.5, projSize, 0, projSize * 2);
+          ctx.bezierCurveTo(-projSize * 1.5, projSize, -projSize * 1.5, -projSize, 0, -projSize * 2);
+          const pGrad = ctx.createLinearGradient(0, -projSize * 2, 0, projSize * 2);
           pGrad.addColorStop(0, 'rgba(244, 239, 231, 0.85)');
           pGrad.addColorStop(1, 'rgba(193, 138, 96, 0.4)');
           ctx.fillStyle = pGrad;
           ctx.fill();
 
         } else {
-          const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, p.size);
+          const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, projSize);
           grad.addColorStop(0, 'rgba(255, 252, 245, 0.95)');
           grad.addColorStop(0.4, p.color);
           grad.addColorStop(1, 'rgba(58, 36, 24, 0)');
           ctx.beginPath();
-          ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+          ctx.arc(0, 0, projSize, 0, Math.PI * 2);
           ctx.fillStyle = grad;
           ctx.fill();
 
           ctx.beginPath();
-          ctx.arc(-p.size * 0.3, -p.size * 0.3, p.size * 0.25, 0, Math.PI * 2);
+          ctx.arc(-projSize * 0.3, -projSize * 0.3, projSize * 0.25, 0, Math.PI * 2);
           ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
           ctx.fill();
         }
@@ -367,7 +556,7 @@ export const FragranceSection: React.FC = () => {
           <div className="absolute inset-y-0 left-0 w-full sm:w-2/3 bg-gradient-to-r from-[#171411]/95 via-[#171411]/85 sm:via-[#171411]/70 to-transparent pointer-events-none" />
         </div>
 
-        {/* High-DPI 4K Canvas Dynamic Motion Overlay (Bubbles, Citrus Orbs, Petals) */}
+        {/* High-DPI 3D Canvas Motion Overlay (Bubbles, Citrus Orbs, Petals with 3D Depth) */}
         <canvas
           ref={canvasRef}
           className="absolute inset-0 z-10 pointer-events-none w-full h-full"
@@ -427,6 +616,13 @@ export const FragranceSection: React.FC = () => {
             </div>
 
           </div>
+
+          {/* RIGHT SIDE INTERACTIVE 3D GLASS BOTTLE CANVAS (Rendered on Scene 01 & Scene 05) */}
+          {(activeScene.id === 'scene-1' || activeScene.id === 'scene-5') && (
+            <div className="hidden lg:col-span-5 lg:flex justify-center items-center z-20 animate-fadeIn">
+              <Fragrance3DBottleCanvas accentColor={activeScene.accentColor} />
+            </div>
+          )}
 
         </div>
 
@@ -488,114 +684,16 @@ export const FragranceSection: React.FC = () => {
             </p>
           </div>
 
-          {/* 4 Cards Grid */}
+          {/* 4 Cards 3D Interactive Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             {products.map((fragrance) => (
-              <div
+              <Fragrance3DProductCard
                 key={fragrance.id}
-                className="group relative bg-[#1E1916] border border-[#3A2418] hover:border-[#D6A35D]/60 transition-all duration-500 flex flex-col justify-between overflow-hidden shadow-xl"
-              >
-                {/* Badge Overlay */}
-                {fragrance.badge && (
-                  <div className="absolute top-3 left-3 z-10 px-2.5 py-1 bg-[#171411]/90 backdrop-blur-md border border-[#D6A35D]/40 text-[9px] font-bold tracking-[0.2em] text-[#D6A35D] uppercase">
-                    {fragrance.badge}
-                  </div>
-                )}
-
-                {/* Rating Badge */}
-                <div className="absolute top-3 right-3 z-10 px-2 py-1 bg-black/70 backdrop-blur-md text-[10px] font-semibold text-white flex items-center gap-1 border border-white/10">
-                  <Star className="w-3 h-3 text-[#D6A35D] fill-current" />
-                  <span>{fragrance.rating}</span>
-                </div>
-
-                {/* Image Container with Hover Zoom */}
-                <div className="relative aspect-[3/4] w-full bg-[#171411] overflow-hidden">
-                  <img
-                    src={fragrance.images[0]}
-                    alt={fragrance.name}
-                    className="w-full h-full object-cover object-center group-hover:scale-108 transition-transform duration-700 filter brightness-95 group-hover:brightness-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#1E1916] via-transparent to-transparent opacity-80" />
-
-                  {/* "EXPLORE NOTES" Hover Overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/50 backdrop-blur-[2px] p-4">
-                    <button
-                      onClick={() => setSelectedNotesProduct(fragrance)}
-                      className="px-5 py-2.5 bg-[#F4EFE7] hover:bg-[#D6A35D] text-[#171411] hover:text-white text-xs font-semibold tracking-[0.15em] uppercase shadow-2xl transition-colors flex items-center gap-2"
-                    >
-                      <Info className="w-3.5 h-3.5" />
-                      <span>EXPLORE NOTES</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Card Info */}
-                <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between text-[10px] text-[#D6A35D] font-mono tracking-widest uppercase mb-1">
-                      <span>{fragrance.subtitle}</span>
-                      <span>{fragrance.size}</span>
-                    </div>
-
-                    <h3 className="font-serif text-2xl font-bold tracking-wider text-[#F4EFE7] group-hover:text-[#D6A35D] transition-colors">
-                      {fragrance.name}
-                    </h3>
-
-                    <p className="text-xs text-[#F4EFE7]/75 font-light line-clamp-2 mt-2 leading-relaxed">
-                      {fragrance.description}
-                    </p>
-
-                    {/* Notes Pills */}
-                    <div className="pt-3 flex flex-wrap gap-1.5">
-                      {fragrance.notes.top.slice(0, 2).map((note) => (
-                        <span key={note} className="px-2 py-0.5 bg-[#171411] text-[10px] text-[#F4EFE7]/80 border border-[#3A2418]">
-                          {note}
-                        </span>
-                      ))}
-                      {fragrance.notes.heart.slice(0, 1).map((note) => (
-                        <span key={note} className="px-2 py-0.5 bg-[#9A5C24]/30 text-[10px] text-[#D6A35D] border border-[#9A5C24]/60">
-                          {note}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Price & Cart Action */}
-                  <div className="pt-4 border-t border-[#3A2418] flex items-center justify-between gap-3">
-                    <div>
-                      <div className="font-serif font-bold text-lg text-[#F4EFE7]">
-                        ₹{fragrance.priceINR.toLocaleString()}
-                      </div>
-                      <div className="text-[10px] font-sans text-[#D6A35D]">
-                        ${fragrance.priceUSD} USD
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={(e) => handleAddToCart(fragrance, e)}
-                      className={`px-4 py-2.5 text-[11px] font-semibold tracking-[0.15em] uppercase transition-all flex items-center gap-1.5 ${
-                        addedProductId === fragrance.id
-                          ? 'bg-emerald-700 text-white'
-                          : 'bg-[#9A5C24] hover:bg-[#D6A35D] text-white shadow-md'
-                      }`}
-                    >
-                      {addedProductId === fragrance.id ? (
-                        <>
-                          <Check className="w-3.5 h-3.5" />
-                          <span>ADDED</span>
-                        </>
-                      ) : (
-                        <>
-                          <ShoppingBag className="w-3.5 h-3.5" />
-                          <span>ADD TO BAG</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                </div>
-
-              </div>
+                fragrance={fragrance}
+                onExploreNotes={setSelectedNotesProduct}
+                onAddToCart={handleAddToCart}
+                isAdded={addedProductId === fragrance.id}
+              />
             ))}
           </div>
 
