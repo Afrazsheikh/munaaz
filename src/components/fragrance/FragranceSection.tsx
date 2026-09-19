@@ -296,23 +296,23 @@ export const FragranceSection: React.FC = () => {
     <section className="relative w-full bg-[#171411] text-[#F4EFE7] overflow-hidden select-none">
       
       {/* Admin Quick Editor Trigger */}
-      <div className="absolute top-4 right-4 z-50">
+      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-50">
         <button
           onClick={() => setIsAdminOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black/80 hover:bg-[#9A5C24] text-[#F4EFE7] text-[10px] font-bold tracking-widest uppercase backdrop-blur-md border border-[#D6A35D]/40 transition-all shadow-2xl"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 bg-black/80 hover:bg-[#9A5C24] text-[#F4EFE7] text-[9px] sm:text-[10px] font-bold tracking-widest uppercase backdrop-blur-md border border-[#D6A35D]/40 transition-all shadow-2xl"
         >
-          <Edit className="w-3.5 h-3.5 text-[#D6A35D]" />
-          <span>EDIT SCENES & CATALOG</span>
+          <Edit className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#D6A35D]" />
+          <span>EDIT SCENES</span>
         </button>
       </div>
 
       {/* ========================================================= */}
-      {/* 1. 100VH 4K DIRECT MACRO VISUAL CAMERA TRAVEL HERO        */}
+      {/* 1. 100DVH 4K DIRECT MACRO VISUAL CAMERA TRAVEL HERO       */}
       {/* ========================================================= */}
       <div
         ref={heroRef}
         onMouseMove={handleMouseMove}
-        className="relative w-full h-screen min-h-[620px] flex items-center justify-between overflow-hidden transform-gpu"
+        className="relative w-full h-[100dvh] min-h-[540px] sm:min-h-[620px] flex items-center justify-between overflow-hidden transform-gpu"
       >
         {/* Full-Bleed 4K Edge-to-Edge Macro Visual Layers with Camera Zoom Travel */}
         <div className="absolute inset-0 z-0">
@@ -354,9 +354,9 @@ export const FragranceSection: React.FC = () => {
 
           {/* PHASE 2 OVERLAY: BOTTLE NECK & CAP RIM SHIMMER (Shown when at Scene 02 Bottle Opening) */}
           {activeScene.id === 'scene-2' && (
-            <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
-              <div className="w-[85vw] h-[85vh] border-[16px] border-[#D6A35D]/30 rounded-full shadow-[inset_0_0_120px_rgba(214,163,93,0.4)] animate-pulse" />
-              <div className="absolute top-12 px-6 py-2 bg-black/70 backdrop-blur-md border border-[#D6A35D]/50 text-[10px] font-mono tracking-[0.3em] text-[#D6A35D] uppercase">
+            <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center p-4">
+              <div className="w-[240px] h-[240px] xs:w-[300px] xs:h-[300px] sm:w-[480px] sm:h-[480px] max-w-[80vw] max-h-[80vw] border-[10px] sm:border-[16px] border-[#D6A35D]/30 rounded-full shadow-[inset_0_0_120px_rgba(214,163,93,0.4)] animate-pulse" />
+              <div className="absolute top-12 px-4 py-1.5 sm:px-6 sm:py-2 bg-black/80 backdrop-blur-md border border-[#D6A35D]/50 text-[9px] sm:text-[10px] font-mono tracking-[0.2em] sm:tracking-[0.3em] text-[#D6A35D] uppercase text-center max-w-[90vw]">
                 GLASS BOTTLE NECK OPENING · ENTERING LIQUID
               </div>
             </div>
@@ -364,11 +364,11 @@ export const FragranceSection: React.FC = () => {
 
           {/* PHASES 3, 4, 5 OVERLAY: INSIDE THE GLASS BOTTLE CONTOUR FRAMING */}
           {['scene-3', 'scene-4', 'scene-5'].includes(activeScene.id) && (
-            <div className="absolute inset-0 z-10 pointer-events-none border-x-[20px] sm:border-x-[40px] border-white/10 shadow-[inset_0_0_100px_rgba(214,163,93,0.35)]" />
+            <div className="absolute inset-0 z-10 pointer-events-none border-x-[10px] xs:border-x-[20px] sm:border-x-[40px] border-white/10 shadow-[inset_0_0_100px_rgba(214,163,93,0.35)]" />
           )}
 
           {/* Left Dark Gradient Overlay for Maximum Text Contrast */}
-          <div className="absolute inset-y-0 left-0 w-full sm:w-2/3 bg-gradient-to-r from-[#171411]/95 via-[#171411]/70 to-transparent pointer-events-none" />
+          <div className="absolute inset-y-0 left-0 w-full sm:w-2/3 bg-gradient-to-r from-[#171411]/95 via-[#171411]/80 sm:via-[#171411]/70 to-transparent pointer-events-none" />
         </div>
 
         {/* High-DPI 4K Canvas Dynamic Motion Overlay (Bubbles, Citrus Orbs, Petals) */}
@@ -386,36 +386,36 @@ export const FragranceSection: React.FC = () => {
         />
 
         {/* LEFT SIDE OVERLAY */}
-        <div className="relative z-20 max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-10 lg:px-16 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-8 sm:pt-0">
           
-          <div key={textKey} className="lg:col-span-7 space-y-6 text-left">
+          <div key={textKey} className="lg:col-span-7 space-y-4 sm:space-y-6 text-left max-w-xl sm:max-w-none">
             
             {/* Category Pill Badge */}
             <div className="animate-fadeInUp">
-              <span className="inline-flex items-center gap-2 px-3.5 py-1 bg-black/60 backdrop-blur-md border border-[#D6A35D]/50 text-[10px] font-bold tracking-[0.25em] text-[#D6A35D] uppercase">
-                <Sparkles className="w-3.5 h-3.5" />
+              <span className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 bg-black/70 backdrop-blur-md border border-[#D6A35D]/50 text-[9px] sm:text-[10px] font-bold tracking-[0.2em] sm:tracking-[0.25em] text-[#D6A35D] uppercase">
+                <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 <span>{activeScene.badge}</span>
               </span>
             </div>
 
             {/* Editorial Heading */}
             <div className="animate-fadeInUp delay-100">
-              <h1 className="font-serif text-4xl sm:text-6xl lg:text-7xl font-bold tracking-[0.12em] uppercase text-[#F4EFE7] leading-[1.05] drop-shadow-2xl">
+              <h1 className="font-serif text-3xl xs:text-4xl sm:text-6xl lg:text-7xl font-bold tracking-[0.1em] sm:tracking-[0.12em] uppercase text-[#F4EFE7] leading-[1.1] sm:leading-[1.05] drop-shadow-2xl">
                 MUNAAZ ESSENCE <br />
                 <span className="text-[#D6A35D] font-light">NO. 07</span>
               </h1>
             </div>
 
             {/* Description Paragraph */}
-            <p className="animate-fadeInUp delay-200 text-xs sm:text-sm text-[#F4EFE7]/90 font-light leading-relaxed max-w-md tracking-wide">
+            <p className="animate-fadeInUp delay-200 text-xs sm:text-sm text-[#F4EFE7]/90 font-light leading-relaxed max-w-md tracking-wide line-clamp-3 sm:line-clamp-none">
               {activeScene.description}
             </p>
 
             {/* Action Buttons */}
-            <div className="animate-fadeInUp delay-300 pt-2 flex flex-wrap items-center gap-3">
+            <div className="animate-fadeInUp delay-300 pt-2 flex flex-col xs:flex-row items-stretch xs:items-center gap-2.5 sm:gap-3">
               <button
                 onClick={() => setSelectedNotesProduct(primaryProduct)}
-                className="bg-[#211815]/90 hover:bg-[#9A5C24] text-[#F4EFE7] text-xs font-semibold px-6 py-3.5 tracking-[0.18em] uppercase transition-all duration-300 border border-[#D6A35D]/50 backdrop-blur-md shadow-lg flex items-center gap-2"
+                className="bg-[#211815]/90 hover:bg-[#9A5C24] text-[#F4EFE7] text-[11px] sm:text-xs font-semibold px-5 py-3 sm:px-6 sm:py-3.5 tracking-[0.15em] sm:tracking-[0.18em] uppercase transition-all duration-300 border border-[#D6A35D]/50 backdrop-blur-md shadow-lg flex items-center justify-center gap-2"
               >
                 <Info className="w-3.5 h-3.5 text-[#D6A35D]" />
                 <span>DISCOVER NO. 07</span>
@@ -423,7 +423,7 @@ export const FragranceSection: React.FC = () => {
 
               <button
                 onClick={(e) => handleAddToCart(primaryProduct, e)}
-                className="bg-[#9A5C24] hover:bg-[#D6A35D] text-white text-xs font-semibold px-7 py-3.5 tracking-[0.18em] uppercase transition-all duration-300 shadow-xl border border-white/10 flex items-center gap-2"
+                className="bg-[#9A5C24] hover:bg-[#D6A35D] text-white text-[11px] sm:text-xs font-semibold px-6 py-3 sm:px-7 sm:py-3.5 tracking-[0.15em] sm:tracking-[0.18em] uppercase transition-all duration-300 shadow-xl border border-white/10 flex items-center justify-center gap-2"
               >
                 <ShoppingBag className="w-3.5 h-3.5" />
                 <span>SHOP NOW</span>
@@ -435,26 +435,26 @@ export const FragranceSection: React.FC = () => {
         </div>
 
         {/* RIGHT SIDE FLOATING BUTTON: VIEW SCENE > */}
-        <div className="absolute right-6 sm:right-12 top-1/2 -translate-y-1/2 z-30">
+        <div className="absolute right-3 sm:right-12 top-1/2 -translate-y-1/2 z-30">
           <button
             onClick={nextScene}
-            className="group px-5 py-3 bg-black/60 hover:bg-[#9A5C24] text-[#F4EFE7] text-xs font-bold tracking-[0.2em] uppercase backdrop-blur-md border border-[#D6A35D]/50 transition-all shadow-2xl flex items-center gap-2 hover:scale-105"
+            className="group px-3 py-2 sm:px-5 sm:py-3 bg-black/70 hover:bg-[#9A5C24] text-[#F4EFE7] text-[10px] sm:text-xs font-bold tracking-[0.15em] sm:tracking-[0.2em] uppercase backdrop-blur-md border border-[#D6A35D]/50 transition-all shadow-2xl flex items-center gap-1.5 sm:gap-2 hover:scale-105"
           >
-            <span>VIEW SCENE</span>
-            <ChevronRight className="w-4 h-4 text-[#D6A35D] group-hover:text-white group-hover:translate-x-1 transition-transform" />
+            <span className="hidden xs:inline">VIEW SCENE</span>
+            <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#D6A35D] group-hover:text-white group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
 
         {/* BOTTOM CENTER CAROUSEL INDICATOR DOTS (. o . . .) */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 bg-black/60 backdrop-blur-md px-5 py-2 border border-white/10">
+        <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5 sm:gap-3 bg-black/70 backdrop-blur-md px-4 py-1.5 sm:px-5 sm:py-2 border border-white/10">
           {scenes.map((scene, idx) => (
             <button
               key={scene.id}
               onClick={() => changeScene(idx)}
               className={`transition-all duration-300 rounded-full ${
                 idx === currentSceneIndex
-                  ? 'w-3 h-3 bg-[#D6A35D] ring-4 ring-[#D6A35D]/30 scale-125'
-                  : 'w-2 h-2 bg-[#F4EFE7]/40 hover:bg-white'
+                  ? 'w-2.5 h-2.5 sm:w-3 sm:h-3 bg-[#D6A35D] ring-2 sm:ring-4 ring-[#D6A35D]/30 scale-125'
+                  : 'w-1.5 h-1.5 sm:w-2 sm:h-2 bg-[#F4EFE7]/40 hover:bg-white'
               }`}
               aria-label={`Go to scene ${idx + 1}`}
             />
