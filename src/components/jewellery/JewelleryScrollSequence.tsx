@@ -152,39 +152,37 @@ export const JewelleryScrollSequence: React.FC<JewelleryScrollSequenceProps> = (
       ctx.save();
       ctx.scale(dpr, dpr);
 
-      // Clear dark obsidian background
-      ctx.fillStyle = '#050505';
-      ctx.fillRect(0, 0, width, height);
+      // Enable maximum sharpness bicubic smoothing
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
 
-      // Object-fit contain / cover logic while maintaining aspect ratio
-      const imgAspect = img.naturalWidth / img.naturalHeight;
-      const canvasAspect = width / height;
+      const imgAspect = (img.naturalWidth && img.naturalHeight)
+        ? img.naturalWidth / img.naturalHeight
+        : 1;
 
       let renderW = width;
       let renderH = height;
-      let offsetX = 0;
-      let offsetY = 0;
 
-      // Fit contained with luxury margin padding
-      const maxDim = Math.min(width, height);
       if (width < 768) {
-        // Mobile layout
-        renderW = width * 0.92;
-        renderH = renderW / imgAspect;
-        offsetX = (width - renderW) / 2;
-        offsetY = (height - renderH) / 2;
-      } else {
-        // Desktop aspect fitting
-        if (imgAspect > canvasAspect) {
-          renderW = width * 0.88;
+        // Mobile layout: Fit contained
+        renderH = height * 0.90;
+        renderW = renderH * imgAspect;
+        if (renderW > width * 0.95) {
+          renderW = width * 0.95;
           renderH = renderW / imgAspect;
-        } else {
-          renderH = height * 0.88;
-          renderW = renderH * imgAspect;
         }
-        offsetX = (width - renderW) / 2;
-        offsetY = (height - renderH) / 2;
+      } else {
+        // Desktop layout: Fit contained
+        renderH = height * 0.92;
+        renderW = renderH * imgAspect;
+        if (renderW > width * 0.95) {
+          renderW = width * 0.95;
+          renderH = renderW / imgAspect;
+        }
       }
+
+      const offsetX = (width - renderW) / 2;
+      const offsetY = (height - renderH) / 2;
 
       // Draw Main Frame Image
       ctx.drawImage(img, offsetX, offsetY, renderW, renderH);

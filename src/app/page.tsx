@@ -12,6 +12,7 @@ import { FragranceSection } from '@/components/fragrance/FragranceSection';
 import { FragranceTeaserCard } from '@/components/fragrance/FragranceTeaserCard';
 import { JewelrySection } from '@/components/jewelry/JewelrySection';
 import { JewelleryScrollSequence } from '@/components/jewellery/JewelleryScrollSequence';
+import { MunaazCinematicHero } from '@/components/MunaazCinematicHero';
 
 export default function HomePage() {
   const [pageLoading, setPageLoading] = useState(true);
@@ -56,7 +57,8 @@ export default function HomePage() {
 
       <div className="space-y-16 sm:space-y-24 pb-16">
         
-        {/* C. HERO SECTION */}
+        {/* 1. MUNAAZ 39-FRAME CINEMATIC FASHION HERO */}
+        <MunaazCinematicHero />
         <section className="relative min-h-[85vh] bg-[#F3E5D0] flex items-center overflow-hidden">
           <div className="absolute inset-0 z-0">
             <Image
