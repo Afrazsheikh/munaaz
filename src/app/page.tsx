@@ -10,6 +10,8 @@ import { ProductCard } from '@/components/product/ProductCard';
 import { ShirtLoader } from '@/components/ui/ShirtLoader';
 import { FragranceSection } from '@/components/fragrance/FragranceSection';
 import { FragranceTeaserCard } from '@/components/fragrance/FragranceTeaserCard';
+import { JewelrySection } from '@/components/jewelry/JewelrySection';
+import { JewelleryScrollSequence } from '@/components/jewellery/JewelleryScrollSequence';
 
 export default function HomePage() {
   const [pageLoading, setPageLoading] = useState(true);
@@ -225,6 +227,12 @@ export default function HomePage() {
 
         {/* E2. MUNAAZ ESSENCE LUXURY FRAGRANCE TEASER BANNER */}
         <FragranceTeaserCard />
+
+        {/* E3. MUNAAZ HAUTE JOAILLERIE FINE SILVER JEWELRY SECTION */}
+        <JewelrySection />
+
+        {/* E4. CINEMATIC JEWELLERY SCROLL SEQUENCE ENGINE (jewScene/1st -> 2nd -> 3rd -> 4th -> 5th...) */}
+        <JewelleryScrollSequence />
 
         {/* NEW FEATURE: INTERACTIVE SHIRT WEARING & FABRIC FIT ADVISOR */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

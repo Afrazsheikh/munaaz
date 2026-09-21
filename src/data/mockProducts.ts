@@ -348,5 +348,220 @@ export const MOCK_PRODUCTS: Product[] = [
     rating: 4.6,
     reviewCount: 14,
     createdAt: '2026-08-01'
+  },
+  {
+    id: 'prod-j1',
+    slug: 'the-eclipse-solitaire-silver-pendant',
+    name: 'The Eclipse Solitaire Silver Pendant',
+    brand: 'MUNAAZ Joaillerie',
+    category: 'jewelry',
+    collections: ['haute-joaillerie', 'silver-edit', 'new-arrivals', 'best-sellers'],
+    shortDescription: 'Solid 925 Sterling Silver pendant set with a brilliant VVS moissanite solitaire.',
+    description: 'Forged from solid 925 Sterling Silver and electroplated with pure rhodium for anti-tarnish mirror shine. The Eclipse Solitaire features a hand-cut 2.0 carat VVS moissanite stone suspended within a minimalist bezel ring.',
+    fabricCare: [
+      'Pure 925 Sterling Silver with Heavy Rhodium Electroplating',
+      'Store in provided anti-tarnish velvet pouch',
+      'Wipe gently with silver polishing cloth',
+      'Avoid direct contact with perfumes, seawater, and harsh chemicals'
+    ],
+    features: [
+      'Solid 925 Sterling Silver hallmark engraved',
+      'Laser-certified 2.0ct VVS D-color Moissanite stone',
+      'Triple-layer platinum-rhodium protective coating',
+      'Adjustable 16-18 inch delicate diamond-cut box chain'
+    ],
+    priceINR: 12990,
+    compareAtPriceINR: 15500,
+    priceUSD: 215,
+    compareAtPriceUSD: 250,
+    images: [
+      'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=1000&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1611591475777-233cd7542d8c?q=80&w=1000&auto=format&fit=crop'
+    ],
+    colors: [
+      { name: 'Pure Sterling Silver', hex: '#E5E8E8', image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=1000&auto=format&fit=crop' }
+    ],
+    sizes: ['16 Inch Chain', '18 Inch Chain', '20 Inch Chain'],
+    variants: [
+      { id: 'v-j1-1', color: 'Pure Sterling Silver', size: '16 Inch Chain', sku: 'MUN-JWL-ECL-16', stock: 8 },
+      { id: 'v-j1-2', color: 'Pure Sterling Silver', size: '18 Inch Chain', sku: 'MUN-JWL-ECL-18', stock: 14 }
+    ],
+    isNewArrival: true,
+    isBestSeller: true,
+    isSale: false,
+    rating: 4.9,
+    reviewCount: 38,
+    createdAt: '2026-09-01'
+  },
+  {
+    id: 'prod-j2',
+    slug: 'the-nocturne-sculpted-silver-signet',
+    name: 'The Nocturne Sculpted Silver Signet',
+    brand: 'MUNAAZ Joaillerie',
+    category: 'jewelry',
+    collections: ['haute-joaillerie', 'silver-edit', 'best-sellers'],
+    shortDescription: 'Architectural brushed 925 silver signet with natural black onyx inlay.',
+    description: 'An iconic blend of raw strength and refined elegance. Handcrafted from heavy 925 sterling silver with a satin-brushed finish, inlayed with a custom-cut deep black onyx stone.',
+    fabricCare: [
+      'Solid 925 Sterling Silver & Natural Black Onyx Gemstone',
+      'Clean with soft dry microfiber cloth',
+      'Keep away from high moisture'
+    ],
+    features: [
+      'Heavyweight 14g solid sterling silver build',
+      'Bezel-set natural faceted black onyx stone',
+      'Hand-brushed matte satin sidewalls',
+      'Subtle internal laser engraving'
+    ],
+    priceINR: 14490,
+    compareAtPriceINR: 16900,
+    priceUSD: 235,
+    compareAtPriceUSD: 275,
+    images: [
+      'https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=1000&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?q=80&w=1000&auto=format&fit=crop'
+    ],
+    colors: [
+      { name: 'Rhodium Silver & Onyx', hex: '#C0C0C0', image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=1000&auto=format&fit=crop' }
+    ],
+    sizes: ['US 7', 'US 8', 'US 9', 'US 10'],
+    variants: [
+      { id: 'v-j2-1', color: 'Rhodium Silver & Onyx', size: 'US 8', sku: 'MUN-JWL-NOC-08', stock: 9 },
+      { id: 'v-j2-2', color: 'Rhodium Silver & Onyx', size: 'US 9', sku: 'MUN-JWL-NOC-09', stock: 12 }
+    ],
+    isNewArrival: true,
+    isBestSeller: true,
+    isSale: false,
+    rating: 5.0,
+    reviewCount: 42,
+    createdAt: '2026-09-05'
+  },
+  {
+    id: 'prod-j3',
+    slug: 'the-starlight-chained-silver-cuff',
+    name: 'The Starlight Chained Silver Cuff',
+    brand: 'MUNAAZ Joaillerie',
+    category: 'jewelry',
+    collections: ['haute-joaillerie', 'silver-edit', 'new-arrivals'],
+    shortDescription: 'Hand-hammered fluid wave 925 sterling silver cuff bangle.',
+    description: 'Inspired by molten starlight in movement. Each cuff is individually hand-sculpted by master artisans in 925 Sterling Silver, polished to a mirror liquid sheen that catches light gracefully.',
+    fabricCare: [
+      'High-grade 925 Sterling Silver',
+      'Store flat in microfiber box',
+      'Polish with enclosed jewellery suede'
+    ],
+    features: [
+      'Hand-hammered organic fluid curve shape',
+      'Flexible open cuff fit',
+      'Anti-tarnish electroplated rhodium finish',
+      'Subtle engraved logo interior'
+    ],
+    priceINR: 18990,
+    compareAtPriceINR: 22000,
+    priceUSD: 295,
+    compareAtPriceUSD: 340,
+    images: [
+      'https://images.unsplash.com/photo-1611591475777-233cd7542d8c?q=80&w=1000&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=1000&auto=format&fit=crop'
+    ],
+    colors: [
+      { name: 'Mirror Sterling Silver', hex: '#D8DCDC', image: 'https://images.unsplash.com/photo-1611591475777-233cd7542d8c?q=80&w=1000&auto=format&fit=crop' }
+    ],
+    sizes: ['Small (6.5 inch)', 'Medium (7.0 inch)', 'Large (7.5 inch)'],
+    variants: [
+      { id: 'v-j3-1', color: 'Mirror Sterling Silver', size: 'Medium (7.0 inch)', sku: 'MUN-JWL-STA-M', stock: 6 }
+    ],
+    isNewArrival: true,
+    isBestSeller: false,
+    isSale: false,
+    rating: 4.8,
+    reviewCount: 21,
+    createdAt: '2026-09-10'
+  },
+  {
+    id: 'prod-j4',
+    slug: 'the-celestial-drop-silver-earrings',
+    name: 'The Celestial Drop Silver Earrings',
+    brand: 'MUNAAZ Joaillerie',
+    category: 'jewelry',
+    collections: ['haute-joaillerie', 'silver-edit', 'new-arrivals'],
+    shortDescription: 'Cascading fine 925 silver drop earrings set with pavé lab diamonds.',
+    description: 'Designed to capture evening radiance. The Celestial Drop features cascading fluid silver threads encrusted with micro-pavé lab diamonds that shimmer effortlessly with every gesture.',
+    fabricCare: [
+      '925 Sterling Silver & Lab-grown Diamonds',
+      'Avoid dropping on hard surfaces',
+      'Wipe clean after wear'
+    ],
+    features: [
+      'Micro-pavé set lab-created diamonds (0.8ctw)',
+      'Secure lever-back closure',
+      'Lightweight hollow core for comfortable night-long wear',
+      'Hypoallergenic rhodium finish'
+    ],
+    priceINR: 15990,
+    compareAtPriceINR: 18500,
+    priceUSD: 255,
+    compareAtPriceUSD: 295,
+    images: [
+      'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=1000&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=1000&auto=format&fit=crop'
+    ],
+    colors: [
+      { name: 'Platinum Silver & Diamond', hex: '#EAEAEA', image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=1000&auto=format&fit=crop' }
+    ],
+    sizes: ['Standard Pair'],
+    variants: [
+      { id: 'v-j4-1', color: 'Platinum Silver & Diamond', size: 'Standard Pair', sku: 'MUN-JWL-CEL-STD', stock: 11 }
+    ],
+    isNewArrival: true,
+    isBestSeller: false,
+    isSale: false,
+    rating: 4.9,
+    reviewCount: 29,
+    createdAt: '2026-09-12'
+  },
+  {
+    id: 'prod-j5',
+    slug: 'the-continuum-liquid-silver-ring',
+    name: 'The Continuum Liquid Silver Ring',
+    brand: 'MUNAAZ Joaillerie',
+    category: 'jewelry',
+    collections: ['haute-joaillerie', 'silver-edit', 'sale'],
+    shortDescription: 'Architectural double-band sterling silver ring with liquid chrome finish.',
+    description: 'A modern masterpiece of minimalist geometry. Dual interlinking bands of solid 925 sterling silver seamlessly float around the finger, creating an illusion of fluid metal in motion.',
+    fabricCare: [
+      'Pure 925 Sterling Silver with High-Mirror Polish',
+      'Clean with silver polishing cloth',
+      'Store in luxury jewelry box'
+    ],
+    features: [
+      'Dual floating interlinking band design',
+      'High-gloss mirror chrome silver finish',
+      'Comfort-fit rounded inner rim',
+      'Engraved serial number authenticity tag'
+    ],
+    priceINR: 9990,
+    compareAtPriceINR: 12500,
+    priceUSD: 160,
+    compareAtPriceUSD: 195,
+    images: [
+      'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?q=80&w=1000&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=1000&auto=format&fit=crop'
+    ],
+    colors: [
+      { name: 'Liquid Silver', hex: '#E2E8F0', image: 'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?q=80&w=1000&auto=format&fit=crop' }
+    ],
+    sizes: ['US 6', 'US 7', 'US 8', 'US 9'],
+    variants: [
+      { id: 'v-j5-1', color: 'Liquid Silver', size: 'US 7', sku: 'MUN-JWL-CON-07', stock: 15 },
+      { id: 'v-j5-2', color: 'Liquid Silver', size: 'US 8', sku: 'MUN-JWL-CON-08', stock: 10 }
+    ],
+    isNewArrival: true,
+    isBestSeller: false,
+    isSale: true,
+    discountPercentage: 20,
+    rating: 4.7,
+    reviewCount: 18,
+    createdAt: '2026-09-08'
   }
 ];

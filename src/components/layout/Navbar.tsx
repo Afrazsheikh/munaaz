@@ -39,12 +39,14 @@ export const Navbar: React.FC<NavbarProps> = ({
     { name: 'NEW ARRIVALS', href: '/collections/new-arrivals' },
     { name: 'MEN', href: '/collections/men' },
     { name: 'WOMEN', href: '/collections/women' },
+    { name: 'JEWELRY', href: '/jewellery', isSpecial: true },
     { name: 'FRAGRANCE', href: '/fragrance', isSpecial: true },
     {
       name: 'COLLECTIONS',
       href: '/shop',
       hasDropdown: true,
       items: [
+        { name: 'Haute Joaillerie Silver Edit', href: '/collections/haute-joaillerie' },
         { name: 'The Linen Edit', href: '/collections/linen-edit' },
         { name: 'Earth Tones Edit', href: '/collections/earth-tones' },
         { name: 'Everyday Essentials', href: '/collections/everyday-essentials' },

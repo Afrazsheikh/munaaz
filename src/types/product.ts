@@ -1,5 +1,5 @@
-export type ProductCategory = 'men' | 'women' | 'accessories';
-export type CollectionSlug = 'new-arrivals' | 'best-sellers' | 'earth-tones' | 'sale' | 'linen-edit' | 'everyday-essentials';
+export type ProductCategory = 'men' | 'women' | 'jewelry' | 'accessories';
+export type CollectionSlug = 'new-arrivals' | 'best-sellers' | 'earth-tones' | 'sale' | 'linen-edit' | 'everyday-essentials' | 'haute-joaillerie' | 'silver-edit';
 
 export interface ProductColor {
   name: string;
