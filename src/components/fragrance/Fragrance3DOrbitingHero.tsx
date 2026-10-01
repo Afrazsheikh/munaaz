@@ -140,7 +140,7 @@ export const Fragrance3DOrbitingHero: React.FC<Fragrance3DOrbitingHeroProps> = (
     window.addEventListener('resize', handleResize);
 
     // Generate 50mm Anamorphic Oval Bokeh Particles
-    const bokehCount = width < 768 ? 20 : 45;
+    const bokehCount = width < 768 ? 10 : 35;
     const bokehs: AnamorphicBokeh[] = Array.from({ length: bokehCount }, () => ({
       x: (Math.random() - 0.5) * width * 1.2,
       y: (Math.random() - 0.5) * height * 1.2,

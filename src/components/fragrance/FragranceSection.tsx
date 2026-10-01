@@ -430,41 +430,6 @@ export const FragranceSection: React.FC = () => {
 
       </div>
 
-      {/* ========================================================= */}
-      {/* 2. PRODUCT SECTION ("MUNAAZ ESSENCE - FIND YOUR SIGNATURE") */}
-      {/* ========================================================= */}
-      <div id="munaaz-essence-collection" className="relative z-20 bg-[#171411] border-t border-[#3A2418] py-20 sm:py-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          {/* Section Header */}
-          <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
-            <span className="text-xs font-bold tracking-[0.3em] uppercase text-[#D6A35D]">
-              MUNAAZ ESSENCE ATELIER
-            </span>
-            <h2 className="font-serif text-3xl sm:text-5xl font-normal tracking-wider text-[#F4EFE7] uppercase">
-              FIND YOUR SIGNATURE
-            </h2>
-            <p className="text-xs sm:text-sm text-[#F4EFE7]/80 font-light leading-relaxed">
-              Discover fragrances crafted to leave a lasting impression. Formulated in France, macerated to perfection.
-            </p>
-          </div>
-
-          {/* 4 Cards 3D Interactive Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-            {products.map((fragrance) => (
-              <Fragrance3DProductCard
-                key={fragrance.id}
-                fragrance={fragrance}
-                onExploreNotes={setSelectedNotesProduct}
-                onAddToCart={handleAddToCart}
-                isAdded={addedProductId === fragrance.id}
-              />
-            ))}
-          </div>
-
-        </div>
-      </div>
-
       {/* Olfactory Notes Modal */}
       {selectedNotesProduct && (
         <FragranceNotesModal

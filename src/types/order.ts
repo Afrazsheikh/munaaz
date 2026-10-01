@@ -15,6 +15,14 @@ export interface Address {
 
 export type PaymentMethodType = 'razorpay' | 'upi' | 'card_in' | 'netbanking' | 'cod' | 'stripe' | 'card_us' | 'apple_pay';
 
+export interface TrackingEvent {
+  id: string;
+  status: string;
+  location: string;
+  timestamp: string;
+  description: string;
+}
+
 export interface Order {
   id: string;
   orderNumber: string;
@@ -37,6 +45,9 @@ export interface Order {
   paymentStatus: 'paid' | 'pending' | 'failed';
   orderStatus: 'placed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   trackingNumber?: string;
+  courierCarrier?: string;
+  trackingHistory?: TrackingEvent[];
+  adminNotes?: string;
   estimatedDelivery: string;
 }
 

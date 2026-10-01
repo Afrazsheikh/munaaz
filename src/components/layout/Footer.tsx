@@ -148,6 +148,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenRegionModal }) => {
               <li><Link href="/about" className="hover:text-[#F3E5D0] transition-colors">About MUNAAZ</Link></li>
               <li><Link href="/privacy-policy" className="hover:text-[#F3E5D0] transition-colors">Privacy Policy</Link></li>
               <li><Link href="/terms" className="hover:text-[#F3E5D0] transition-colors">Terms of Service</Link></li>
+              <li><Link href="/admin/login" className="hover:text-[#C18A60] transition-colors text-[#C18A60] font-semibold">Admin Portal</Link></li>
             </ul>
 
             <div className="mt-6">

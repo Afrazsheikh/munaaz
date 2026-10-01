@@ -58,7 +58,7 @@ export default function HomePage() {
       <div className="space-y-16 sm:space-y-24 pb-16">
         
         {/* 1. MUNAAZ 39-FRAME CINEMATIC FASHION HERO */}
-        <MunaazCinematicHero />
+        {/* <MunaazCinematicHero /> */}
         <section className="relative min-h-[85vh] bg-[#F3E5D0] flex items-center overflow-hidden">
           <div className="absolute inset-0 z-0">
             <Image
@@ -234,7 +234,7 @@ export default function HomePage() {
         <JewelrySection />
 
         {/* E4. CINEMATIC JEWELLERY SCROLL SEQUENCE ENGINE (jewScene/1st -> 2nd -> 3rd -> 4th -> 5th...) */}
-        <JewelleryScrollSequence />
+        {/* <JewelleryScrollSequence /> */}
 
         {/* NEW FEATURE: INTERACTIVE SHIRT WEARING & FABRIC FIT ADVISOR */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

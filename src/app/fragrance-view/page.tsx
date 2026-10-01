@@ -180,10 +180,10 @@ export default function FragranceViewPage() {
       </header>
 
       {/* 2. CINEMATIC SCROLL-DRIVEN 5-STAGE FRAME SEQUENCE HERO */}
-      <FragranceScrollSequence
+      {/* <FragranceScrollSequence
         onShopClick={scrollToCollection}
         onExploreClick={scrollToCollection}
-      />
+      /> */}
 
       {/* 3. 360-DEGREE VOLUMETRIC ORBIT HERO SHOWCASE */}
       <section className="bg-[#17120E] border-t border-[#C9A46A]/20 py-20 sm:py-28 relative overflow-hidden">

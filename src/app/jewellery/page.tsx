@@ -32,7 +32,7 @@ export default function JewelleryPage() {
       </section>
 
       {/* 2. CINEMATIC SCROLL SEQUENCE ENGINE (jewScene/1st -> 2nd -> 3rd -> 4th -> 5th...) */}
-      <JewelleryScrollSequence />
+      {/* <JewelleryScrollSequence /> */}
 
       {/* 3. CURATED CREATIONS CATALOG */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 border-t border-[#C0C0C0]/20">

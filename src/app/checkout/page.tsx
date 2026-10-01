@@ -51,8 +51,8 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = () => {
     setIsSubmitting(true);
-    setTimeout(() => {
-      const newOrder = orderService.createOrder({
+    setTimeout(async () => {
+      const newOrder = await orderService.createOrder({
         customer: { name: fullName, email, phone },
         shippingAddress: {
           id: `addr-${Date.now()}`,
