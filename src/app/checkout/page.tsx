@@ -1,18 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
 import { useRegion } from '@/context/RegionContext';
+import { useAuth } from '@/context/AuthContext';
 import { orderService } from '@/services/orderService';
 import { Order, PaymentMethodType } from '@/types/order';
 import { openCashfreeModal } from '@/lib/cashfreeClient';
-import { CheckCircle2, ShieldCheck, Lock, Truck, CreditCard, ArrowRight, X, AlertCircle } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, Lock, Truck, CreditCard, ArrowRight, X, AlertCircle, User as UserIcon } from 'lucide-react';
 
 export default function CheckoutPage() {
   const { items, subtotalINR, subtotalUSD, discountINR, discountUSD, clearCart } = useCart();
   const { region, config, formatPrice } = useRegion();
+  const { user, isAuthenticated } = useAuth();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1); // 1: Address & Contact, 2: Payment, 3: Review, 4: Confirmed Order
 
@@ -26,6 +28,24 @@ export default function CheckoutPage() {
   const [state, setState] = useState('');
   const [postalCode, setPostalCode] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>(region === 'IN' ? 'cashfree' : 'stripe');
+
+  // Pre-fill user data if authenticated
+  useEffect(() => {
+    if (user) {
+      if (!email && user.email) setEmail(user.email);
+      if (!fullName && user.name) setFullName(user.name);
+      if (!phone && user.phone) setPhone(user.phone);
+      const defaultAddr = user.addresses?.find((a) => a.isDefault) || user.addresses?.[0];
+      if (defaultAddr) {
+        if (!street) setStreet(defaultAddr.street);
+        if (!apartment && defaultAddr.apartment) setApartment(defaultAddr.apartment);
+        if (!city) setCity(defaultAddr.city);
+        if (!state) setState(defaultAddr.state);
+        if (!postalCode) setPostalCode(defaultAddr.postalCode);
+        if (!phone && defaultAddr.phone) setPhone(defaultAddr.phone);
+      }
+    }
+  }, [user]);
 
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -287,7 +307,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-      
+
       {/* Checkout Steps Indicator */}
       <div className="flex items-center justify-center gap-4 text-xs font-semibold uppercase tracking-wider mb-10 pb-4 border-b border-[#DDCBB7]">
         <span className={step === 1 ? 'text-[#A85F43] underline' : 'text-[#806B5D]'}>1. SHIPPING</span>
@@ -298,10 +318,10 @@ export default function CheckoutPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-        
+
         {/* Left Column Form Steps (7 Cols) */}
         <div className="lg:col-span-7 bg-[#FFF9F1] border border-[#DDCBB7] p-6 sm:p-8 space-y-6">
-          
+
           {errorMsg && (
             <div className="p-3 bg-red-100 border border-red-400 text-red-700 text-xs font-medium">
               {errorMsg}
@@ -311,10 +331,26 @@ export default function CheckoutPage() {
           {/* STEP 1: CONTACT & SHIPPING ADDRESS */}
           {step === 1 && (
             <form onSubmit={handleStep1Next} className="space-y-6">
-              <h2 className="font-serif text-xl font-bold text-[#35251E] flex items-center gap-2">
-                <Truck className="w-5 h-5 text-[#A85F43]" />
-                <span>SHIPPING & CONTACT INFORMATION</span>
-              </h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#DDCBB7]">
+                <h2 className="font-serif text-xl font-bold text-[#35251E] flex items-center gap-2">
+                  <Truck className="w-5 h-5 text-[#A85F43]" />
+                  <span>SHIPPING & CONTACT INFORMATION</span>
+                </h2>
+
+                {isAuthenticated && user ? (
+                  <span className="text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-300 px-2.5 py-1 rounded inline-flex items-center gap-1.5 font-medium">
+                    <UserIcon className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Signed in as <strong>{user.name}</strong></span>
+                  </span>
+                ) : (
+                  <div className="text-xs text-[#806B5D] flex items-center gap-1.5">
+                    <span>Have an account?</span>
+                    <Link href="/login" className="text-[#A85F43] font-bold underline hover:text-[#35251E]">
+                      Sign In / Google
+                    </Link>
+                  </div>
+                )}
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Lock, Mail, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import GoogleAuthButton from '@/components/auth/GoogleAuthButton';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -52,6 +53,21 @@ export default function LoginPage() {
           </div>
         )}
 
+        {/* 1. Direct Google Sign-In */}
+        <div className="space-y-4">
+          <GoogleAuthButton mode="signin" onSuccessRedirect="/account" />
+
+          {/* Divider */}
+          <div className="relative flex items-center justify-center">
+            <div className="border-t border-[#DDCBB7] w-full" />
+            <span className="bg-[#FFF9F1] px-3 text-[10px] uppercase font-bold tracking-widest text-[#806B5D] whitespace-nowrap">
+              OR CONTINUE WITH EMAIL
+            </span>
+            <div className="border-t border-[#DDCBB7] w-full" />
+          </div>
+        </div>
+
+        {/* 2. Email + Password Login Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-[#35251E] mb-1 uppercase tracking-wider">
@@ -104,7 +120,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full bg-[#A85F43] hover:bg-[#C18A60] text-[#FFF9F1] text-xs font-semibold py-4 uppercase tracking-[0.15em] transition-colors flex items-center justify-center gap-2"
           >
-            <span>{loading ? 'SIGNING IN...' : 'SIGN IN'}</span>
+            <span>{loading ? 'SIGNING IN...' : 'SIGN IN WITH EMAIL'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>

@@ -97,5 +97,8 @@ export interface User {
   name: string;
   email: string;
   phone?: string;
+  avatar?: string;
+  provider?: 'credentials' | 'google';
+  googleId?: string;
   addresses: Address[];
 }
