@@ -8,7 +8,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   register: (name: string, email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
-  loginWithGoogle: (data: { credential?: string; profile?: any }) => Promise<{ success: boolean; error?: string; isNewUser?: boolean }>;
+  loginWithGoogle: (data: { credential?: string; profile?: any; mode?: 'signin' | 'signup' }) => Promise<{ success: boolean; error?: string; isNewUser?: boolean; notFound?: boolean }>;
   logout: () => void;
   addAddress: (address: Omit<Address, 'id'>) => Promise<{ success: boolean; error?: string }>;
   deleteAddress: (addressId: string) => Promise<{ success: boolean; error?: string }>;
@@ -134,7 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   /**
    * Google Sign-In & Sign-Up via MongoDB
    */
-  const loginWithGoogle = async (payload: { credential?: string; profile?: any }) => {
+  const loginWithGoogle = async (payload: { credential?: string; profile?: any; mode?: 'signin' | 'signup' }) => {
     try {
       const res = await fetch('/api/auth/google', {
         method: 'POST',
@@ -145,7 +145,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        return { success: false, error: data.message || 'Google authentication failed' };
+        return {
+          success: false,
+          error: data.message || 'Google authentication failed',
+          notFound: data.notFound
+        };
       }
 
       saveUser(data.user);

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Lock, Mail, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, ArrowRight, AlertCircle, UserPlus } from 'lucide-react';
 import GoogleAuthButton from '@/components/auth/GoogleAuthButton';
 
 export default function LoginPage() {
@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [isNotFound, setIsNotFound] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -22,6 +23,11 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.search);
     const googleUserStr = params.get('google_user');
     const err = params.get('error');
+    const notFoundParam = params.get('notFound');
+
+    if (notFoundParam) {
+      setIsNotFound(true);
+    }
 
     if (err) {
       setError(decodeURIComponent(err));
@@ -71,8 +77,22 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <div className="p-3 bg-red-100 border border-red-400 text-red-700 text-xs text-center font-medium">
-            {error}
+          <div className="p-3 bg-red-50 border border-red-300 text-red-800 text-xs rounded space-y-2">
+            <div className="flex items-center gap-2 font-medium">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{error}</span>
+            </div>
+            {isNotFound && (
+              <div className="pt-2 border-t border-red-200">
+                <Link
+                  href="/register"
+                  className="w-full bg-[#A85F43] hover:bg-[#8A4A32] text-white text-[11px] font-bold py-2 px-3 tracking-wider uppercase transition-colors flex items-center justify-center gap-1.5 rounded shadow-sm"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>SIGN UP WITH GOOGLE NOW →</span>
+                </Link>
+              </div>
+            )}
           </div>
         )}
 

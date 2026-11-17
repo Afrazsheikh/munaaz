@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { X, Sparkles } from 'lucide-react';
+import { X, Sparkles, UserPlus, AlertCircle } from 'lucide-react';
 
 interface GoogleAuthButtonProps {
   mode?: 'signin' | 'signup';
@@ -26,14 +27,44 @@ export default function GoogleAuthButton({
   const { loginWithGoogle } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isNotFound, setIsNotFound] = useState(false);
   const [showDirectModal, setShowDirectModal] = useState(false);
   const [testEmail, setTestEmail] = useState('');
   const [testName, setTestName] = useState('');
-  const hiddenBtnRef = useRef<HTMLDivElement>(null);
+  const googleBtnMountRef = useRef<HTMLDivElement>(null);
 
-  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
+  const googleClientId =
+    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+    '268218644129-5vp2tsl1c3748lauittmdgevf87dp4tc.apps.googleusercontent.com';
 
-  // Initialize official Google Identity Services script
+  // Listen for popup OAuth messages from /api/auth/google/callback
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (!event.data || typeof event.data !== 'object') return;
+
+      if (event.data.type === 'GOOGLE_AUTH_SUCCESS' && event.data.user) {
+        setLoading(false);
+        setError('');
+        setIsNotFound(false);
+        router.push(onSuccessRedirect);
+      } else if (event.data.type === 'GOOGLE_AUTH_NOT_FOUND') {
+        setLoading(false);
+        setIsNotFound(true);
+        setError(
+          event.data.error ||
+            'No user found with this Google account. Please sign up first.'
+        );
+      } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
+        setLoading(false);
+        setError(event.data.error || 'Google authentication failed.');
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [onSuccessRedirect, router]);
+
+  // Initialize official Google Identity Services
   useEffect(() => {
     if (!googleClientId) return;
 
@@ -44,12 +75,25 @@ export default function GoogleAuthButton({
       if (response && response.credential) {
         setLoading(true);
         setError('');
+        setIsNotFound(false);
         try {
-          const res = await loginWithGoogle({ credential: response.credential });
+          const res = await loginWithGoogle({
+            credential: response.credential,
+            mode
+          });
+
           if (res.success) {
             router.push(onSuccessRedirect);
           } else {
-            setError(res.error || 'Google authentication failed');
+            if (res.notFound) {
+              setIsNotFound(true);
+            }
+            setError(
+              res.error ||
+                (mode === 'signin'
+                  ? 'No user found with this Google account. Please sign up first.'
+                  : 'Google signup failed.')
+            );
           }
         } catch (err: any) {
           setError(err.message || 'Google authentication error');
@@ -69,16 +113,10 @@ export default function GoogleAuthButton({
             cancel_on_tap_outside: true
           });
 
-          // Render hidden official button for programmatic clicking
-          if (hiddenBtnRef.current) {
-            window.google.accounts.id.renderButton(hiddenBtnRef.current, {
-              theme: 'outline',
-              size: 'large',
-              width: 320
-            });
-          }
+          // Show One Tap if user is signed in on browser
+          window.google.accounts.id.prompt(() => {});
         } catch (e) {
-          console.warn('[GIS Init Error]:', e);
+          console.warn('[GIS Init Warning]:', e);
         }
       }
     };
@@ -94,54 +132,52 @@ export default function GoogleAuthButton({
     } else if (window.google?.accounts?.id) {
       initGis();
     }
-  }, [googleClientId, loginWithGoogle, onSuccessRedirect, router]);
+  }, [googleClientId, loginWithGoogle, mode, onSuccessRedirect, router]);
 
-  const redirectToGoogleOAuth = () => {
+  /**
+   * Opens Google's official Account Chooser popup with available accounts list
+   */
+  const handleGoogleClick = () => {
+    setError('');
+    setIsNotFound(false);
+
+    if (!googleClientId) {
+      setShowDirectModal(true);
+      return;
+    }
+
+    setLoading(true);
+
     const origin =
       typeof window !== 'undefined'
         ? window.location.origin
         : 'https://munaaz.vercel.app';
     const redirectUri = `${origin}/api/auth/google/callback`;
+
+    // prompt=select_account forces Google to show ALL signed-in accounts on device
     const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
       googleClientId
     )}&redirect_uri=${encodeURIComponent(
       redirectUri
     )}&response_type=code&scope=${encodeURIComponent(
       'openid email profile'
-    )}&prompt=select_account`;
+    )}&prompt=select_account&state=${mode}`;
 
-    window.location.href = googleAuthUrl;
-  };
+    const width = 500;
+    const height = 620;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
 
-  const handleGoogleClick = () => {
-    setError('');
+    const popup = window.open(
+      googleAuthUrl,
+      'google_account_picker',
+      `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
+    );
 
-    if (googleClientId) {
-      // 1. Try clicking the rendered official button first
-      const renderedBtn = hiddenBtnRef.current?.querySelector(
-        'div[role=button], iframe'
-      ) as HTMLElement;
-      if (renderedBtn) {
-        renderedBtn.click();
-        return;
-      }
-
-      // 2. Try triggering GIS One Tap prompt
-      if (window.google?.accounts?.id) {
-        window.google.accounts.id.prompt((notification: any) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            redirectToGoogleOAuth();
-          }
-        });
-        return;
-      }
-
-      // 3. Fallback to direct OAuth redirect
-      redirectToGoogleOAuth();
-      return;
+    // If popup blocked, fallback to standard redirect
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+      window.location.href = googleAuthUrl;
     }
-
-    setShowDirectModal(true);
   };
 
   const handleDirectGoogleSubmit = async (e: React.FormEvent) => {
@@ -150,11 +186,13 @@ export default function GoogleAuthButton({
 
     setLoading(true);
     setError('');
+    setIsNotFound(false);
 
     try {
       const cleanEmail = testEmail.trim().toLowerCase();
       const displayName = testName.trim() || cleanEmail.split('@')[0].replace('.', ' ');
       const res = await loginWithGoogle({
+        mode,
         profile: {
           email: cleanEmail,
           name: displayName,
@@ -167,7 +205,10 @@ export default function GoogleAuthButton({
         setShowDirectModal(false);
         router.push(onSuccessRedirect);
       } else {
-        setError(res.error || 'Failed to authenticate');
+        if (res.notFound) {
+          setIsNotFound(true);
+        }
+        setError(res.error || 'Authentication failed');
       }
     } catch (err: any) {
       setError(err.message || 'Authentication error');
@@ -180,18 +221,35 @@ export default function GoogleAuthButton({
 
   return (
     <div className={`w-full ${className}`}>
+      {/* Error / Not Found Alert */}
       {error && (
-        <div className="mb-3 p-2.5 bg-red-50 border border-red-300 text-red-700 text-xs text-center font-medium rounded">
-          {error}
+        <div className="mb-3 p-3 bg-red-50 border border-red-300 text-red-800 text-xs rounded space-y-2">
+          <div className="flex items-center gap-2 font-medium">
+            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+            <span>{error}</span>
+          </div>
+
+          {/* If on Login and user was not found, show direct 1-click Sign Up button */}
+          {isNotFound && mode === 'signin' && (
+            <div className="pt-2 border-t border-red-200">
+              <Link
+                href="/register"
+                className="w-full bg-[#A85F43] hover:bg-[#8A4A32] text-white text-[11px] font-bold py-2 px-3 tracking-wider uppercase transition-colors flex items-center justify-center gap-1.5 rounded shadow-sm"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>SIGN UP WITH GOOGLE NOW →</span>
+              </Link>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Primary Brand Google Button */}
+      {/* Main Google Button */}
       <button
         type="button"
         onClick={handleGoogleClick}
         disabled={loading}
-        className="w-full bg-[#FFFFFF] hover:bg-[#F8F9FA] text-[#3c4043] border border-[#dadce0] hover:border-[#d2e3fc] hover:shadow-[0_1px_3px_1px_rgba(60,64,67,0.15)] text-xs font-semibold py-3 px-4 transition-all duration-150 flex items-center justify-center gap-3 active:bg-[#f1f3f4]"
+        className="w-full bg-[#FFFFFF] hover:bg-[#F8F9FA] text-[#3c4043] border border-[#dadce0] hover:border-[#d2e3fc] hover:shadow-[0_1px_3px_1px_rgba(60,64,67,0.15)] text-xs font-semibold py-3 px-4 transition-all duration-150 flex items-center justify-center gap-3 active:bg-[#f1f3f4] rounded-sm cursor-pointer shadow-sm"
       >
         <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
           <path
@@ -212,39 +270,24 @@ export default function GoogleAuthButton({
           />
         </svg>
         <span className="tracking-wide">
-          {loading ? 'CONNECTING TO GOOGLE...' : buttonText}
+          {loading ? 'OPENING GOOGLE ACCOUNT PICKER...' : buttonText}
         </span>
       </button>
 
-      {/* Hidden container for GIS button mount */}
-      <div ref={hiddenBtnRef} className="hidden" aria-hidden="true" />
-
-      {/* Direct Google Sign-In Dialog */}
+      {/* Direct Fallback Dialog if client ID is missing */}
       {showDirectModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#FFF9F1] border border-[#DDCBB7] shadow-2xl max-w-sm w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-[#FFF9F1] border border-[#DDCBB7] shadow-2xl max-w-sm w-full p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[#DDCBB7]">
               <div className="flex items-center gap-2">
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                  />
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                 </svg>
                 <h3 className="font-serif text-lg font-bold text-[#35251E]">
-                  Google Direct Sign-In
+                  Google Account Sign-In
                 </h3>
               </div>
               <button
@@ -257,7 +300,7 @@ export default function GoogleAuthButton({
             </div>
 
             <p className="text-xs text-[#806B5D] leading-relaxed">
-              Enter your Google email to authenticate directly with MUNAAZ Atelier via MongoDB Atlas.
+              Enter your Google account email to authenticate directly via MongoDB Atlas.
             </p>
 
             <form onSubmit={handleDirectGoogleSubmit} className="space-y-3">
@@ -302,7 +345,7 @@ export default function GoogleAuthButton({
                   className="px-5 py-2 bg-[#A85F43] hover:bg-[#8A4A32] text-white text-xs font-semibold uppercase tracking-wider transition-colors flex items-center gap-1.5"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>{loading ? 'Authenticating...' : 'Sign In Now'}</span>
+                  <span>{loading ? 'Authenticating...' : mode === 'signup' ? 'Sign Up' : 'Sign In'}</span>
                 </button>
               </div>
             </form>

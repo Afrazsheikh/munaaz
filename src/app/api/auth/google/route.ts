@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   try {
     await dbConnect();
     const body = await req.json();
-    const { credential, profile } = body;
+    const { credential, profile, mode = 'signin' } = body;
 
     let email = '';
     let name = '';
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
     // 1. Process Google JWT Credential from Google Identity Services
     if (credential) {
-      // First, attempt official Google tokeninfo verification if network is reachable
+      // First, attempt official Google tokeninfo verification if reachable
       try {
         const verifyRes = await fetch(
           `https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`
@@ -59,13 +59,25 @@ export async function POST(req: Request) {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    // 2. Check if user already exists in MongoDB
+    // 2. Check if user already exists in MongoDB Atlas
     let user = await UserModel.findOne({
       $or: [{ email: cleanEmail }, ...(googleId ? [{ googleId }] : [])]
     });
 
+    // If attempting to Sign In on /login, but user is NOT registered:
+    if (mode === 'signin' && !user) {
+      return NextResponse.json(
+        {
+          success: false,
+          notFound: true,
+          message: 'No user found with this Google account. Please sign up first.'
+        },
+        { status: 404 }
+      );
+    }
+
+    // If user exists: sign them in
     if (user) {
-      // Update googleId and avatar if not already stored
       let changed = false;
       if (!user.googleId && googleId) {
         user.googleId = googleId;
@@ -87,7 +99,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // 3. New User Registration via Google
+    // 3. Mode is 'signup' and user does not exist: direct signup in MongoDB
     const newUser = await UserModel.create({
       name: name.trim() || cleanEmail.split('@')[0],
       email: cleanEmail,

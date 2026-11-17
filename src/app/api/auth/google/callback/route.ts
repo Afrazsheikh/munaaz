@@ -8,19 +8,32 @@ export async function GET(req: Request) {
     await dbConnect();
     const { searchParams, origin } = new URL(req.url);
     const code = searchParams.get('code');
+    const state = searchParams.get('state') || 'signin';
     const error = searchParams.get('error');
 
-    if (error || !code) {
-      return NextResponse.redirect(
-        `${origin}/login?error=${encodeURIComponent(error || 'Google sign-in was cancelled.')}`
+    const htmlResponse = (script: string) =>
+      new NextResponse(
+        `<!DOCTYPE html><html><head><title>Authenticating with Google...</title></head><body style="background:#FFF9F1;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;"><p style="font-size:14px;color:#35251E;">Processing Google Sign-In, please wait...</p><script>${script}</script></body></html>`,
+        { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
       );
+
+    if (error || !code) {
+      const errMsg = error || 'Google sign-in was cancelled.';
+      return htmlResponse(`
+        if (window.opener) {
+          window.opener.postMessage({ type: 'GOOGLE_AUTH_ERROR', error: ${JSON.stringify(errMsg)} }, '*');
+          window.close();
+        } else {
+          window.location.href = '/login?error=' + encodeURIComponent(${JSON.stringify(errMsg)});
+        }
+      `);
     }
 
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
     const redirectUri = `${origin}/api/auth/google/callback`;
 
-    // Exchange authorization code for tokens
+    // Exchange authorization code with Google
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -37,16 +50,27 @@ export async function GET(req: Request) {
 
     if (!tokenRes.ok || !tokenData.id_token) {
       console.error('[Google OAuth Token Error]:', tokenData);
-      return NextResponse.redirect(
-        `${origin}/login?error=${encodeURIComponent(tokenData.error_description || 'Token exchange failed')}`
-      );
+      const failMsg = tokenData.error_description || 'Google token exchange failed';
+      return htmlResponse(`
+        if (window.opener) {
+          window.opener.postMessage({ type: 'GOOGLE_AUTH_ERROR', error: ${JSON.stringify(failMsg)} }, '*');
+          window.close();
+        } else {
+          window.location.href = '/login?error=' + encodeURIComponent(${JSON.stringify(failMsg)});
+        }
+      `);
     }
 
     const decoded = decodeJwtPayload(tokenData.id_token);
     if (!decoded || !decoded.email) {
-      return NextResponse.redirect(
-        `${origin}/login?error=Invalid Google authentication response`
-      );
+      return htmlResponse(`
+        if (window.opener) {
+          window.opener.postMessage({ type: 'GOOGLE_AUTH_ERROR', error: 'Invalid Google token' }, '*');
+          window.close();
+        } else {
+          window.location.href = '/login?error=Invalid+Google+token';
+        }
+      `);
     }
 
     const cleanEmail = decoded.email.trim().toLowerCase();
@@ -54,11 +78,25 @@ export async function GET(req: Request) {
     const googleId = decoded.sub;
     const avatar = decoded.picture || '';
 
-    // Find or create in MongoDB Atlas
+    // Check if user already exists in MongoDB Atlas
     let user = await UserModel.findOne({
       $or: [{ email: cleanEmail }, { googleId }]
     });
 
+    // If on Sign-In and user does NOT exist: prompt to sign up first
+    if (state === 'signin' && !user) {
+      const notFoundMsg = 'No user found with this Google account. Please sign up first.';
+      return htmlResponse(`
+        if (window.opener) {
+          window.opener.postMessage({ type: 'GOOGLE_AUTH_NOT_FOUND', error: ${JSON.stringify(notFoundMsg)}, notFound: true, email: ${JSON.stringify(cleanEmail)} }, '*');
+          window.close();
+        } else {
+          window.location.href = '/login?error=' + encodeURIComponent(${JSON.stringify(notFoundMsg)}) + '&notFound=true&email=' + encodeURIComponent(${JSON.stringify(cleanEmail)});
+        }
+      `);
+    }
+
+    // If on Sign-Up and user does NOT exist: create account in MongoDB
     if (!user) {
       user = await UserModel.create({
         name,
@@ -81,9 +119,19 @@ export async function GET(req: Request) {
       if (changed) await user.save();
     }
 
-    const userJson = encodeURIComponent(JSON.stringify(user.toJSON()));
+    const userJson = user.toJSON();
 
-    return NextResponse.redirect(`${origin}/login?google_user=${userJson}`);
+    return htmlResponse(`
+      try {
+        localStorage.setItem('munaaz_user_session', JSON.stringify(${JSON.stringify(userJson)}));
+      } catch (e) {}
+      if (window.opener) {
+        window.opener.postMessage({ type: 'GOOGLE_AUTH_SUCCESS', user: ${JSON.stringify(userJson)} }, '*');
+        window.close();
+      } else {
+        window.location.href = '/account';
+      }
+    `);
   } catch (err: any) {
     console.error('[Google Callback Exception]:', err);
     return NextResponse.redirect(
