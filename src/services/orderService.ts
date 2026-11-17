@@ -149,7 +149,12 @@ export const orderService = {
 
   getOrderById(id: string): Order | undefined {
     const orders = this.getOrders();
-    return orders.find((o) => o.id === id || o.orderNumber === id || o.trackingNumber === id);
+    return orders.find((o) => o.id === id || o.orderNumber === id || o.trackingNumber === id || (o as any).shiprocketAwb === id);
+  },
+
+  async getOrderByIdAsync(id: string): Promise<Order | undefined> {
+    const orders = await this.getOrdersAsync();
+    return orders.find((o) => o.id === id || o.orderNumber === id || o.trackingNumber === id || (o as any).shiprocketAwb === id);
   },
 
   async createOrder(orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'orderStatus' | 'paymentStatus' | 'estimatedDelivery'>): Promise<Order> {

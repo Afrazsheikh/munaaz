@@ -144,7 +144,7 @@ export default function AdminDashboardPage() {
   const loadAllData = useCallback(async () => {
     setLoadingData(true);
     const prods = await productService.getAllProducts();
-    const ords = orderService.getOrders();
+    const ords = await orderService.getOrdersAsync();
     const cpns = await couponService.getCoupons();
     setProducts(prods);
     setOrders(ords);
@@ -791,12 +791,13 @@ export default function AdminDashboardPage() {
                               <span className="text-gray-500">Unassigned</span>
                             )}
                           </td>
-                          <td className="p-3">
+                          <td className="p-3 whitespace-nowrap">
                             <button
                               onClick={() => openOrderTrackingModal(ord)}
-                              className="px-3 py-1 bg-[#C9A46A] hover:bg-[#D8C7AD] text-black text-[10px] font-bold uppercase transition-colors"
+                              className="px-3 py-1.5 bg-[#C9A46A] hover:bg-[#D8C7AD] text-black text-[10px] font-bold uppercase tracking-wider transition-all inline-flex items-center gap-1.5 shadow-sm"
                             >
-                              TRACK & UPDATE
+                              <Truck className="w-3.5 h-3.5 shrink-0 text-black" />
+                              <span>SHIP & TRACK</span>
                             </button>
                           </td>
                         </tr>
@@ -1221,6 +1222,15 @@ export default function AdminDashboardPage() {
                 </button>
               </div>
 
+              {/* Shiprocket Dispatch Guidance Banner */}
+              <div className="p-3.5 bg-[#17120E] border border-[#C9A46A]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5 text-[#D8C7AD]">
+                  <Truck className="w-4 h-4 text-[#C9A46A] shrink-0" />
+                  <span>Click the gold <strong>FULFILL & SHIP</strong> button on any order to manifest and dispatch via Shiprocket.</span>
+                </div>
+                <span className="text-[10px] text-[#C9A46A] uppercase font-bold tracking-wider font-mono">Doorstep: Primary (171006)</span>
+              </div>
+
               {/* Order Search & Filter */}
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 bg-[#17120E] border border-[#C9A46A]/25 p-4">
                 <div className="sm:col-span-8 relative">
@@ -1338,20 +1348,24 @@ export default function AdminDashboardPage() {
                             <span className="text-gray-500 italic">No tracking code</span>
                           )}
                         </td>
-                        <td className="p-3.5 text-right space-x-2">
+                        <td className="p-3.5 text-right space-x-2 whitespace-nowrap">
                           <button
+                            type="button"
                             onClick={() => setInvoiceModalOrder(ord)}
-                            className="px-3 py-1.5 bg-[#050505] border border-[#C9A46A]/40 hover:border-[#C9A46A] text-[#C9A46A] text-[11px] font-bold uppercase transition-colors inline-flex items-center gap-1"
+                            className="px-3 py-1.5 bg-[#050505] border border-[#C9A46A]/40 hover:border-[#C9A46A] text-[#C9A46A] text-[11px] font-bold uppercase transition-colors inline-flex items-center gap-1.5"
                             title="Print Luxury Invoice"
                           >
                             <Printer className="w-3.5 h-3.5" />
                             <span>INVOICE</span>
                           </button>
                           <button
+                            type="button"
                             onClick={() => openOrderTrackingModal(ord)}
-                            className="px-3 py-1.5 bg-[#C9A46A] hover:bg-[#D8C7AD] text-black text-[11px] font-bold uppercase transition-colors inline-flex items-center gap-1"
+                            className="px-3.5 py-1.5 bg-[#C9A46A] hover:bg-[#D8C7AD] text-black text-[11px] font-bold uppercase tracking-wider transition-all inline-flex items-center gap-1.5 shadow-md"
+                            title="Open Shiprocket Dispatch & Live Tracking"
                           >
-                            <span>TRACKING & STATUS</span>
+                            <Truck className="w-4 h-4 text-black shrink-0" />
+                            <span>{ord.shiprocketShipmentId ? 'SHIPROCKET / TRACK' : 'FULFILL & SHIP'}</span>
                           </button>
                         </td>
                       </tr>
