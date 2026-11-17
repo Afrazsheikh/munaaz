@@ -31,13 +31,13 @@ export default function GoogleAuthButton({
   const [showDirectModal, setShowDirectModal] = useState(false);
   const [testEmail, setTestEmail] = useState('');
   const [testName, setTestName] = useState('');
-  const googleBtnMountRef = useRef<HTMLDivElement>(null);
+  const tokenClientRef = useRef<any>(null);
 
   const googleClientId =
     process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
     '268218644129-5vp2tsl1c3748lauittmdgevf87dp4tc.apps.googleusercontent.com';
 
-  // Listen for popup OAuth messages from /api/auth/google/callback
+  // Listen for popup messages if redirect flow was triggered
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (!event.data || typeof event.data !== 'object') return;
@@ -64,60 +64,125 @@ export default function GoogleAuthButton({
     return () => window.removeEventListener('message', handleMessage);
   }, [onSuccessRedirect, router]);
 
-  // Initialize official Google Identity Services
+  // Load and initialize Google Identity Services (GIS)
   useEffect(() => {
     if (!googleClientId) return;
 
     const scriptId = 'google-gis-script';
     let script = document.getElementById(scriptId) as HTMLScriptElement;
 
-    const handleCredentialResponse = async (response: any) => {
-      if (response && response.credential) {
-        setLoading(true);
-        setError('');
-        setIsNotFound(false);
-        try {
-          const res = await loginWithGoogle({
-            credential: response.credential,
-            mode
-          });
+    const setupClients = () => {
+      if (!window.google?.accounts?.oauth2) return;
 
-          if (res.success) {
-            router.push(onSuccessRedirect);
-          } else {
-            if (res.notFound) {
-              setIsNotFound(true);
+      try {
+        // Modern Token Client (avoids redirect_uri_mismatch, opens native account picker directly)
+        tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
+          client_id: googleClientId,
+          scope:
+            'openid email profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+          prompt: 'select_account',
+          callback: async (tokenResponse: any) => {
+            if (tokenResponse.error) {
+              setLoading(false);
+              setError(
+                tokenResponse.error_description ||
+                  'Google sign-in was cancelled or encountered an issue.'
+              );
+              return;
             }
-            setError(
-              res.error ||
-                (mode === 'signin'
-                  ? 'No user found with this Google account. Please sign up first.'
-                  : 'Google signup failed.')
-            );
-          }
-        } catch (err: any) {
-          setError(err.message || 'Google authentication error');
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
 
-    const initGis = () => {
-      if (window.google?.accounts?.id) {
-        try {
+            try {
+              // Fetch Google user profile using the access token
+              const profileRes = await fetch(
+                'https://www.googleapis.com/oauth2/v3/userinfo',
+                {
+                  headers: {
+                    Authorization: `Bearer ${tokenResponse.access_token}`
+                  }
+                }
+              );
+
+              const profile = await profileRes.json();
+
+              if (!profile || !profile.email) {
+                setError('Could not retrieve email from Google account.');
+                setLoading(false);
+                return;
+              }
+
+              // Send to MongoDB Atlas auth endpoint
+              const res = await loginWithGoogle({
+                profile: {
+                  email: profile.email,
+                  name: profile.name || profile.given_name,
+                  googleId: profile.sub,
+                  avatar: profile.picture || ''
+                },
+                mode
+              });
+
+              if (res.success) {
+                setError('');
+                setIsNotFound(false);
+                router.push(onSuccessRedirect);
+              } else {
+                if (res.notFound) {
+                  setIsNotFound(true);
+                }
+                setError(
+                  res.error ||
+                    (mode === 'signin'
+                      ? 'No user found with this Google account. Please sign up first.'
+                      : 'Google registration failed.')
+                );
+              }
+            } catch (err: any) {
+              console.error('[Google Userinfo Fetch Error]:', err);
+              setError(err.message || 'Error processing Google account details.');
+            } finally {
+              setLoading(false);
+            }
+          }
+        });
+
+        // Also initialize One Tap if supported
+        if (window.google?.accounts?.id) {
           window.google.accounts.id.initialize({
             client_id: googleClientId,
-            callback: handleCredentialResponse,
+            callback: async (response: any) => {
+              if (response && response.credential) {
+                setLoading(true);
+                setError('');
+                setIsNotFound(false);
+                try {
+                  const res = await loginWithGoogle({
+                    credential: response.credential,
+                    mode
+                  });
+                  if (res.success) {
+                    router.push(onSuccessRedirect);
+                  } else {
+                    if (res.notFound) setIsNotFound(true);
+                    setError(
+                      res.error ||
+                        'No user found with this Google account. Please sign up first.'
+                    );
+                  }
+                } catch (err: any) {
+                  setError(err.message || 'Google authentication error');
+                } finally {
+                  setLoading(false);
+                }
+              }
+            },
             auto_select: false,
             cancel_on_tap_outside: true
           });
 
-          // Show One Tap if user is signed in on browser
           window.google.accounts.id.prompt(() => {});
-        } catch (e) {
-          console.warn('[GIS Init Warning]:', e);
         }
+      } catch (err) {
+        console.warn('[GIS Setup Warning]:', err);
       }
     };
 
@@ -127,15 +192,16 @@ export default function GoogleAuthButton({
       script.src = 'https://accounts.google.com/gsi/client';
       script.async = true;
       script.defer = true;
-      script.onload = initGis;
+      script.onload = setupClients;
       document.body.appendChild(script);
-    } else if (window.google?.accounts?.id) {
-      initGis();
+    } else {
+      setupClients();
     }
   }, [googleClientId, loginWithGoogle, mode, onSuccessRedirect, router]);
 
   /**
-   * Opens Google's official Account Chooser popup with available accounts list
+   * Main Google button click handler:
+   * Uses Token Client first (popup with available accounts, NO redirect_uri mismatch!)
    */
   const handleGoogleClick = () => {
     setError('');
@@ -148,13 +214,70 @@ export default function GoogleAuthButton({
 
     setLoading(true);
 
+    // 1. If Token Client is ready, request access token with account picker
+    if (tokenClientRef.current) {
+      try {
+        tokenClientRef.current.requestAccessToken({ prompt: 'select_account' });
+        return;
+      } catch (err) {
+        console.warn('[TokenClient Error]: Falling back to popup redirect', err);
+      }
+    }
+
+    // 2. Fallback: If script is still loading, try re-initializing or open popup
+    if (window.google?.accounts?.oauth2) {
+      try {
+        const client = window.google.accounts.oauth2.initTokenClient({
+          client_id: googleClientId,
+          scope:
+            'openid email profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+          prompt: 'select_account',
+          callback: async (tokenResponse: any) => {
+            if (tokenResponse.access_token) {
+              const profileRes = await fetch(
+                'https://www.googleapis.com/oauth2/v3/userinfo',
+                {
+                  headers: {
+                    Authorization: `Bearer ${tokenResponse.access_token}`
+                  }
+                }
+              );
+              const profile = await profileRes.json();
+              const res = await loginWithGoogle({
+                profile: {
+                  email: profile.email,
+                  name: profile.name || profile.given_name,
+                  googleId: profile.sub,
+                  avatar: profile.picture || ''
+                },
+                mode
+              });
+              setLoading(false);
+              if (res.success) {
+                router.push(onSuccessRedirect);
+              } else {
+                if (res.notFound) setIsNotFound(true);
+                setError(
+                  res.error ||
+                    'No user found with this Google account. Please sign up first.'
+                );
+              }
+            }
+          }
+        });
+        tokenClientRef.current = client;
+        client.requestAccessToken({ prompt: 'select_account' });
+        return;
+      } catch (e) {}
+    }
+
+    // 3. Fallback popup redirect
     const origin =
       typeof window !== 'undefined'
         ? window.location.origin
         : 'https://munaaz.vercel.app';
     const redirectUri = `${origin}/api/auth/google/callback`;
 
-    // prompt=select_account forces Google to show ALL signed-in accounts on device
     const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
       googleClientId
     )}&redirect_uri=${encodeURIComponent(
@@ -174,7 +297,6 @@ export default function GoogleAuthButton({
       `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
     );
 
-    // If popup blocked, fallback to standard redirect
     if (!popup || popup.closed || typeof popup.closed === 'undefined') {
       window.location.href = googleAuthUrl;
     }
@@ -190,14 +312,17 @@ export default function GoogleAuthButton({
 
     try {
       const cleanEmail = testEmail.trim().toLowerCase();
-      const displayName = testName.trim() || cleanEmail.split('@')[0].replace('.', ' ');
+      const displayName =
+        testName.trim() || cleanEmail.split('@')[0].replace('.', ' ');
       const res = await loginWithGoogle({
         mode,
         profile: {
           email: cleanEmail,
           name: displayName,
           googleId: `google-${Date.now()}`,
-          avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(displayName)}`
+          avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
+            displayName
+          )}`
         }
       });
 
