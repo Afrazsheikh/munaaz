@@ -33,7 +33,7 @@ export default function GoogleAuthButton({
 
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 
-  // Initialize official Google Identity Services script if Client ID is configured
+  // Initialize official Google Identity Services script
   useEffect(() => {
     if (!googleClientId) return;
 
@@ -61,20 +61,24 @@ export default function GoogleAuthButton({
 
     const initGis = () => {
       if (window.google?.accounts?.id) {
-        window.google.accounts.id.initialize({
-          client_id: googleClientId,
-          callback: handleCredentialResponse,
-          auto_select: false,
-          cancel_on_tap_outside: true
-        });
-
-        // Render hidden official button for programmatic clicking
-        if (hiddenBtnRef.current) {
-          window.google.accounts.id.renderButton(hiddenBtnRef.current, {
-            theme: 'outline',
-            size: 'large',
-            width: 320
+        try {
+          window.google.accounts.id.initialize({
+            client_id: googleClientId,
+            callback: handleCredentialResponse,
+            auto_select: false,
+            cancel_on_tap_outside: true
           });
+
+          // Render hidden official button for programmatic clicking
+          if (hiddenBtnRef.current) {
+            window.google.accounts.id.renderButton(hiddenBtnRef.current, {
+              theme: 'outline',
+              size: 'large',
+              width: 320
+            });
+          }
+        } catch (e) {
+          console.warn('[GIS Init Error]:', e);
         }
       }
     };
@@ -92,27 +96,51 @@ export default function GoogleAuthButton({
     }
   }, [googleClientId, loginWithGoogle, onSuccessRedirect, router]);
 
+  const redirectToGoogleOAuth = () => {
+    const origin =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : 'https://munaaz.vercel.app';
+    const redirectUri = `${origin}/api/auth/google/callback`;
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
+      googleClientId
+    )}&redirect_uri=${encodeURIComponent(
+      redirectUri
+    )}&response_type=code&scope=${encodeURIComponent(
+      'openid email profile'
+    )}&prompt=select_account`;
+
+    window.location.href = googleAuthUrl;
+  };
+
   const handleGoogleClick = () => {
     setError('');
 
-    // If official Google Client ID is configured and GIS loaded, trigger prompt
-    if (googleClientId && window.google?.accounts?.id) {
-      // First try opening GIS prompt
-      window.google.accounts.id.prompt((notification: any) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          // If One Tap was skipped or blocked, click the hidden rendered button
-          const btn = hiddenBtnRef.current?.querySelector('div[role=button]') as HTMLElement;
-          if (btn) {
-            btn.click();
-          } else {
-            setShowDirectModal(true);
+    if (googleClientId) {
+      // 1. Try clicking the rendered official button first
+      const renderedBtn = hiddenBtnRef.current?.querySelector(
+        'div[role=button], iframe'
+      ) as HTMLElement;
+      if (renderedBtn) {
+        renderedBtn.click();
+        return;
+      }
+
+      // 2. Try triggering GIS One Tap prompt
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.prompt((notification: any) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            redirectToGoogleOAuth();
           }
-        }
-      });
+        });
+        return;
+      }
+
+      // 3. Fallback to direct OAuth redirect
+      redirectToGoogleOAuth();
       return;
     }
 
-    // If Google Client ID is not yet configured, show direct Google sign-in dialog
     setShowDirectModal(true);
   };
 
@@ -191,7 +219,7 @@ export default function GoogleAuthButton({
       {/* Hidden container for GIS button mount */}
       <div ref={hiddenBtnRef} className="hidden" aria-hidden="true" />
 
-      {/* Direct Google Sign-In Dialog (when Client ID is pending setup or testing) */}
+      {/* Direct Google Sign-In Dialog */}
       {showDirectModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#FFF9F1] border border-[#DDCBB7] shadow-2xl max-w-sm w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -16,6 +16,29 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const googleUserStr = params.get('google_user');
+    const err = params.get('error');
+
+    if (err) {
+      setError(decodeURIComponent(err));
+    }
+
+    if (googleUserStr) {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(googleUserStr));
+        if (parsed && parsed.email) {
+          localStorage.setItem('munaaz_user_session', JSON.stringify(parsed));
+          window.location.href = '/account';
+        }
+      } catch (e) {
+        console.error('Failed to parse google user', e);
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
