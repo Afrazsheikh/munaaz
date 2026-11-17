@@ -33,9 +33,7 @@ export default function GoogleAuthButton({
   const [testName, setTestName] = useState('');
   const tokenClientRef = useRef<any>(null);
 
-  const googleClientId =
-    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
-    '268218644129-5vp2tsl1c3748lauittmdgevf87dp4tc.apps.googleusercontent.com';
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 
   // Listen for popup messages if redirect flow was triggered
   useEffect(() => {
