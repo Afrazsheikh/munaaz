@@ -399,6 +399,17 @@ export default function GoogleAuthButton({
         </span>
       </button>
 
+      {/* Fallback option if Google Cloud Console is pending origin updates */}
+      <div className="mt-2 text-center">
+        <button
+          type="button"
+          onClick={() => setShowDirectModal(true)}
+          className="text-[10px] text-[#806B5D] hover:text-[#A85F43] underline transition-colors cursor-pointer"
+        >
+          Having Google Cloud origin issues? Click here for Direct Google Sign-In
+        </button>
+      </div>
+
       {/* Direct Fallback Dialog if client ID is missing */}
       {showDirectModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
