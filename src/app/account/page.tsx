@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { orderService } from '@/services/orderService';
 import { useRegion } from '@/context/RegionContext';
-import { User, Package, MapPin, Heart, LogOut, ChevronRight } from 'lucide-react';
+import { User, Package, MapPin, Heart, LogOut, ChevronRight, Truck } from 'lucide-react';
 
 export default function AccountPage() {
   const router = useRouter();
@@ -121,18 +121,36 @@ export default function AccountPage() {
             </div>
 
             {recentOrder ? (
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs gap-4">
-                <div>
-                  <span className="font-bold text-sm text-[#35251E]">#{recentOrder.orderNumber}</span>
-                  <p className="text-[#806B5D] mt-0.5">Placed on {new Date(recentOrder.createdAt).toLocaleDateString()}</p>
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs gap-4">
+                  <div>
+                    <span className="font-bold text-sm text-[#35251E]">#{recentOrder.orderNumber}</span>
+                    <p className="text-[#806B5D] mt-0.5">Placed on {new Date(recentOrder.createdAt).toLocaleDateString()}</p>
+                    {(recentOrder.shiprocketAwb || recentOrder.trackingNumber) && (
+                      <p className="text-[11px] text-[#A85F43] font-semibold mt-1">
+                        AWB: {recentOrder.shiprocketAwb || recentOrder.trackingNumber} ({recentOrder.courierCarrier || 'Shiprocket'})
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <span className="bg-[#A85F43]/10 text-[#A85F43] px-2.5 py-1 font-bold border border-[#A85F43] uppercase text-[10px]">
+                      STATUS: {recentOrder.orderStatus}
+                    </span>
+                    <span className="block font-bold text-[#35251E] mt-1">
+                      {recentOrder.currency === 'INR' ? '₹' : '$'}{recentOrder.total.toLocaleString()}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="bg-[#A85F43]/10 text-[#A85F43] px-2.5 py-1 font-bold border border-[#A85F43] uppercase text-[10px]">
-                    STATUS: {recentOrder.orderStatus}
-                  </span>
-                  <span className="block font-bold text-[#35251E] mt-1">
-                    {recentOrder.currency === 'INR' ? '₹' : '$'}{recentOrder.total.toLocaleString()}
-                  </span>
+
+                <div className="pt-2 border-t border-[#DDCBB7]/40 flex justify-end">
+                  <Link
+                    href={`/account/orders/${recentOrder.id}`}
+                    className="bg-[#A85F43] hover:bg-[#8A4A32] text-white text-xs font-semibold px-4 py-2 transition-colors uppercase tracking-wider inline-flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Truck className="w-3.5 h-3.5" />
+                    <span>TRACK & VIEW ORDER</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
               </div>
             ) : (

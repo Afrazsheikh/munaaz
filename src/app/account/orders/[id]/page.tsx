@@ -19,8 +19,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [isSyncingTracking, setIsSyncingTracking] = useState(false);
 
   useEffect(() => {
-    const res = orderService.getOrderById(id);
-    if (res) setOrder(res);
+    // 1. Try local/cached lookup first
+    const cached = orderService.getOrderById(id);
+    if (cached) setOrder(cached);
+
+    // 2. Query MongoDB database asynchronously to ensure fresh data
+    orderService.getOrderByIdAsync(id).then((ord) => {
+      if (ord) setOrder(ord);
+    });
   }, [id]);
 
   const handleSyncTracking = async () => {
