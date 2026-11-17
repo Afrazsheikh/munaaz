@@ -118,6 +118,15 @@ export default function AdminDashboardPage() {
     eventDescription: ''
   });
 
+  // Shiprocket Parcel Dimensions State
+  const [srDimensions, setSrDimensions] = useState({
+    length: 15,
+    breadth: 15,
+    height: 5,
+    weight: 0.5
+  });
+  const [isShiprocketLoading, setIsShiprocketLoading] = useState(false);
+
   // Password Update Form
   const [passwordForm, setPasswordForm] = useState({
     oldPassword: '',
@@ -308,6 +317,140 @@ export default function AdminDashboardPage() {
       showNotify('success', `Order ${updated.orderNumber} tracking & status updated successfully!`);
       setTrackingModalOrder(null);
       loadAllData();
+    }
+  };
+
+  const handleAdminCancelAndRefund = async () => {
+    if (!trackingModalOrder) return;
+    const confirmCancel = window.confirm(`Cancel Order #${trackingModalOrder.orderNumber} and initiate refund if paid online?`);
+    if (!confirmCancel) return;
+
+    const res = await orderService.cancelOrder(trackingModalOrder.id, 'Admin cancellation / Customer requested', 'admin');
+    if (res.success && res.data) {
+      showNotify('success', res.message || 'Order cancelled & refund initiated.');
+      setTrackingModalOrder(null);
+      loadAllData();
+    } else {
+      showNotify('error', res.message || 'Failed to cancel order.');
+    }
+  };
+
+  const handleAdminInitiateRto = async () => {
+    if (!trackingModalOrder) return;
+    const reason = window.prompt('Enter reason for RTO (e.g. Delivery attempt failed / Customer unavailable / Address incorrect):', 'Customer unavailable / Delivery attempted');
+    if (reason === null) return;
+
+    const res = await orderService.processRto(trackingModalOrder.id, {
+      action: 'initiate',
+      rtoReason: reason || 'Delivery failed',
+      returnCourier: trackingModalOrder.courierCarrier
+    });
+
+    if (res.success && res.data) {
+      showNotify('success', 'Order marked as RTO Initiated.');
+      setTrackingModalOrder(null);
+      loadAllData();
+    } else {
+      showNotify('error', res.message || 'Failed to update RTO status.');
+    }
+  };
+
+  const handleAdminConfirmRtoDelivered = async () => {
+    if (!trackingModalOrder) return;
+    const shouldRefund = window.confirm(`Confirm RTO package delivered back to Atelier? This will process Cashfree refund if prepaid.`);
+    if (!shouldRefund) return;
+
+    const res = await orderService.processRto(trackingModalOrder.id, {
+      action: 'delivered',
+      processRefund: true
+    });
+
+    if (res.success && res.data) {
+      showNotify('success', res.message || 'RTO delivery confirmed.');
+      setTrackingModalOrder(null);
+      loadAllData();
+    } else {
+      showNotify('error', res.message || 'Failed to confirm RTO delivery.');
+    }
+  };
+
+  const handleShipWithShiprocket = async () => {
+    if (!trackingModalOrder) return;
+    setIsShiprocketLoading(true);
+    try {
+      const res = await orderService.createShiprocketShipment(trackingModalOrder.id, srDimensions);
+      if (res.success && res.data?.order) {
+        showNotify('success', `Shiprocket shipment created! AWB: ${res.data.awbCode || 'Assigned'}`);
+        setTrackingModalOrder(res.data.order);
+        loadAllData();
+      } else {
+        showNotify('error', res.message || 'Failed to create shipment on Shiprocket');
+      }
+    } catch (err: any) {
+      showNotify('error', err.message || 'Shiprocket API error');
+    } finally {
+      setIsShiprocketLoading(false);
+    }
+  };
+
+  const handleSyncShiprocketTracking = async () => {
+    if (!trackingModalOrder) return;
+    setIsShiprocketLoading(true);
+    try {
+      const res = await orderService.trackShiprocketShipment({
+        orderId: trackingModalOrder.id,
+        awb: trackingModalOrder.shiprocketAwb || trackingModalOrder.trackingNumber
+      });
+      if (res.success && res.data?.order) {
+        showNotify('success', 'Live tracking scans synchronized from Shiprocket.');
+        setTrackingModalOrder(res.data.order);
+        loadAllData();
+      } else {
+        showNotify('error', res.message || 'Tracking scans up to date.');
+      }
+    } catch (err: any) {
+      showNotify('error', err.message || 'Could not fetch live tracking.');
+    } finally {
+      setIsShiprocketLoading(false);
+    }
+  };
+
+  const handlePrintShiprocketLabel = async () => {
+    if (!trackingModalOrder) return;
+    if (trackingModalOrder.shiprocketLabelUrl) {
+      window.open(trackingModalOrder.shiprocketLabelUrl, '_blank');
+      return;
+    }
+    setIsShiprocketLoading(true);
+    try {
+      const res = await orderService.getShiprocketLabel(trackingModalOrder.id);
+      if (res.success && res.labelUrl) {
+        window.open(res.labelUrl, '_blank');
+      } else {
+        showNotify('error', res.message || 'Failed to generate shipping label PDF.');
+      }
+    } catch (err: any) {
+      showNotify('error', err.message || 'Label generation failed.');
+    } finally {
+      setIsShiprocketLoading(false);
+    }
+  };
+
+  const handleScheduleShiprocketPickup = async () => {
+    if (!trackingModalOrder) return;
+    setIsShiprocketLoading(true);
+    try {
+      const res = await orderService.scheduleShiprocketPickup(trackingModalOrder.id);
+      if (res.success) {
+        showNotify('success', res.message || 'Pickup scheduled successfully with courier.');
+        loadAllData();
+      } else {
+        showNotify('error', res.message || 'Failed to schedule pickup.');
+      }
+    } catch (err: any) {
+      showNotify('error', err.message || 'Pickup scheduling failed.');
+    } finally {
+      setIsShiprocketLoading(false);
     }
   };
 
@@ -1104,6 +1247,8 @@ export default function AdminDashboardPage() {
                     <option value="shipped">SHIPPED</option>
                     <option value="delivered">DELIVERED</option>
                     <option value="cancelled">CANCELLED</option>
+                    <option value="rto_initiated">RTO INITIATED</option>
+                    <option value="rto_delivered">RTO DELIVERED</option>
                   </select>
                 </div>
               </div>
@@ -1160,14 +1305,31 @@ export default function AdminDashboardPage() {
                                 ? 'bg-blue-950 text-blue-300 border border-blue-800'
                                 : ord.orderStatus === 'processing'
                                 ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                                : ord.orderStatus === 'rto_initiated' || ord.orderStatus === 'rto_delivered'
+                                ? 'bg-purple-950 text-purple-300 border border-purple-800'
+                                : ord.orderStatus === 'cancelled'
+                                ? 'bg-red-950 text-red-300 border border-red-800'
                                 : 'bg-gray-800 text-gray-300'
                             }`}
                           >
-                            {ord.orderStatus}
+                            {ord.orderStatus.replace('_', ' ')}
                           </span>
+                          {ord.refundStatus && ord.refundStatus !== 'none' && (
+                            <span className="block text-[9px] text-emerald-400 mt-1 uppercase font-semibold">
+                              Refund: {ord.refundStatus}
+                            </span>
+                          )}
                         </td>
                         <td className="p-3.5">
-                          {ord.trackingNumber ? (
+                          {ord.shiprocketAwb ? (
+                            <div>
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider bg-[#C9A46A]/20 text-[#C9A46A] px-1.5 py-0.5 rounded mb-1">
+                                Shiprocket
+                              </span>
+                              <p className="font-bold text-white font-mono text-[11px]">{ord.shiprocketAwb}</p>
+                              <p className="text-[10px] text-[#D8C7AD]/70">{ord.shiprocketCourier || ord.courierCarrier}</p>
+                            </div>
+                          ) : ord.trackingNumber ? (
                             <div>
                               <p className="font-bold text-[#C9A46A]">{ord.trackingNumber}</p>
                               <p className="text-[10px] text-[#D8C7AD]/60">{ord.courierCarrier || 'Carrier assigned'}</p>
@@ -1569,6 +1731,8 @@ export default function AdminDashboardPage() {
                     <option value="shipped">SHIPPED</option>
                     <option value="delivered">DELIVERED</option>
                     <option value="cancelled">CANCELLED</option>
+                    <option value="rto_initiated">RTO INITIATED</option>
+                    <option value="rto_delivered">RTO DELIVERED</option>
                   </select>
                 </div>
 
@@ -1669,6 +1833,203 @@ export default function AdminDashboardPage() {
                     ))
                   ) : (
                     <p className="text-[11px] text-gray-500 italic">No timeline events recorded yet.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* SHIPROCKET AUTOMATED LOGISTICS FULFILLMENT */}
+              <div className="p-4 bg-[#0A0706] border border-[#C9A46A]/50 space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-[#C9A46A]/20">
+                  <div className="flex items-center gap-2 text-[#C9A46A]">
+                    <Truck className="w-4 h-4" />
+                    <span className="text-[10px] uppercase font-bold tracking-widest">
+                      SHIPROCKET AUTOMATED FULFILLMENT & AWB DISPATCH
+                    </span>
+                  </div>
+                  {trackingModalOrder.shiprocketStatus && (
+                    <span className="text-[10px] font-mono font-bold bg-[#C9A46A]/20 text-[#C9A46A] px-2 py-0.5 rounded uppercase">
+                      {trackingModalOrder.shiprocketStatus}
+                    </span>
+                  )}
+                </div>
+
+                {trackingModalOrder.shiprocketShipmentId ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#050505] p-3 border border-[#C9A46A]/20 text-[11px]">
+                      <div>
+                        <span className="text-[10px] text-[#C9A46A] block">SHIPMENT ID</span>
+                        <span className="font-mono font-bold text-white">{trackingModalOrder.shiprocketShipmentId}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-[#C9A46A] block">AWB CODE</span>
+                        <span className="font-mono font-bold text-[#C9A46A]">{trackingModalOrder.shiprocketAwb || trackingModalOrder.trackingNumber}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-[#C9A46A] block">COURIER</span>
+                        <span className="font-bold text-white truncate">{trackingModalOrder.shiprocketCourier || trackingModalOrder.courierCarrier}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-[#C9A46A] block">PICKUP LOCATION</span>
+                        <span className="text-white">Primary (171006)</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <button
+                        type="button"
+                        disabled={isShiprocketLoading}
+                        onClick={handlePrintShiprocketLabel}
+                        className="px-3 py-1.5 bg-[#C9A46A] hover:bg-[#D8C7AD] text-black text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        <span>Print Shipping Label</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isShiprocketLoading}
+                        onClick={handleScheduleShiprocketPickup}
+                        className="px-3 py-1.5 bg-[#1F1712] hover:bg-[#2A1F18] border border-[#C9A46A]/50 text-[#C9A46A] text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                      >
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>Request Courier Pickup</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isShiprocketLoading}
+                        onClick={handleSyncShiprocketTracking}
+                        className="px-3 py-1.5 bg-[#050505] border border-[#C9A46A]/40 hover:border-[#C9A46A] text-[#D8C7AD] text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isShiprocketLoading ? 'animate-spin' : ''}`} />
+                        <span>Sync Live Tracking</span>
+                      </button>
+
+                      <a
+                        href={`https://shiprocket.co/tracking/${trackingModalOrder.shiprocketAwb || trackingModalOrder.trackingNumber}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 bg-[#050505] border border-[#C9A46A]/40 hover:border-[#C9A46A] text-[#D8C7AD] text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Track on Shiprocket</span>
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-[11px] text-[#D8C7AD]/80">
+                      Parcel has not been dispatched on Shiprocket yet. Confirm package weight & dimensions to generate AWB and schedule pickup from <strong>Primary (171006)</strong>.
+                    </p>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <div>
+                        <label className="text-[9px] text-[#C9A46A] uppercase block">LENGTH (CM)</label>
+                        <input
+                          type="number"
+                          value={srDimensions.length}
+                          onChange={(e) => setSrDimensions({ ...srDimensions, length: Number(e.target.value) })}
+                          className="w-full bg-[#050505] border border-[#C9A46A]/30 text-white p-1.5 text-xs font-mono outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] text-[#C9A46A] uppercase block">BREADTH (CM)</label>
+                        <input
+                          type="number"
+                          value={srDimensions.breadth}
+                          onChange={(e) => setSrDimensions({ ...srDimensions, breadth: Number(e.target.value) })}
+                          className="w-full bg-[#050505] border border-[#C9A46A]/30 text-white p-1.5 text-xs font-mono outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] text-[#C9A46A] uppercase block">HEIGHT (CM)</label>
+                        <input
+                          type="number"
+                          value={srDimensions.height}
+                          onChange={(e) => setSrDimensions({ ...srDimensions, height: Number(e.target.value) })}
+                          className="w-full bg-[#050505] border border-[#C9A46A]/30 text-white p-1.5 text-xs font-mono outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] text-[#C9A46A] uppercase block">WEIGHT (KG)</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={srDimensions.weight}
+                          onChange={(e) => setSrDimensions({ ...srDimensions, weight: Number(e.target.value) })}
+                          className="w-full bg-[#050505] border border-[#C9A46A]/30 text-white p-1.5 text-xs font-mono outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={isShiprocketLoading}
+                      onClick={handleShipWithShiprocket}
+                      className="w-full py-2.5 bg-[#C9A46A] hover:bg-[#D8C7AD] text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-colors disabled:opacity-50"
+                    >
+                      <Truck className="w-4 h-4" />
+                      <span>{isShiprocketLoading ? 'MANIFESTING WITH SHIPROCKET...' : 'SHIP WITH SHIPROCKET & GENERATE AWB'}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* CASHFREE PAYMENT, REFUND & RTO MANAGEMENT ACTIONS */}
+              <div className="p-4 bg-[#0A0706] border border-[#C9A46A]/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-[#C9A46A] uppercase font-bold tracking-widest block">
+                    CASHFREE GATEWAY & RTO LOGISTICS ACTIONS
+                  </span>
+                  <span className="text-[10px] text-[#D8C7AD]/60 uppercase">
+                    Payment: <strong className="text-white">{trackingModalOrder.paymentStatus}</strong> ({trackingModalOrder.paymentMethod})
+                  </span>
+                </div>
+
+                {trackingModalOrder.cashfreeOrderId && (
+                  <p className="text-[11px] text-[#D8C7AD]/70 font-mono">
+                    Cashfree Order ID: <span className="text-[#C9A46A]">{trackingModalOrder.cashfreeOrderId}</span>
+                    {trackingModalOrder.cashfreePaymentId && (
+                      <> | Payment ID: <span className="text-white">{trackingModalOrder.cashfreePaymentId}</span></>
+                    )}
+                  </p>
+                )}
+
+                {trackingModalOrder.refundStatus && trackingModalOrder.refundStatus !== 'none' && (
+                  <p className="text-[11px] text-emerald-400 font-mono">
+                    Refund Status: <strong className="uppercase">{trackingModalOrder.refundStatus}</strong>
+                  </p>
+                )}
+
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-[#C9A46A]/15">
+                  {trackingModalOrder.orderStatus !== 'cancelled' && (
+                    <button
+                      type="button"
+                      onClick={handleAdminCancelAndRefund}
+                      className="px-3 py-1.5 bg-red-950/70 hover:bg-red-900 border border-red-700/60 text-red-300 text-[11px] font-semibold uppercase tracking-wider transition-colors"
+                    >
+                      Cancel & Process Refund
+                    </button>
+                  )}
+
+                  {trackingModalOrder.orderStatus !== 'rto_initiated' && trackingModalOrder.orderStatus !== 'rto_delivered' && (
+                    <button
+                      type="button"
+                      onClick={handleAdminInitiateRto}
+                      className="px-3 py-1.5 bg-amber-950/70 hover:bg-amber-900 border border-amber-700/60 text-amber-300 text-[11px] font-semibold uppercase tracking-wider transition-colors"
+                    >
+                      Initiate RTO (Return to Origin)
+                    </button>
+                  )}
+
+                  {trackingModalOrder.orderStatus === 'rto_initiated' && (
+                    <button
+                      type="button"
+                      onClick={handleAdminConfirmRtoDelivered}
+                      className="px-3 py-1.5 bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700/60 text-emerald-300 text-[11px] font-semibold uppercase tracking-wider transition-colors"
+                    >
+                      Confirm RTO Delivered & Process Refund
+                    </button>
                   )}
                 </div>
               </div>

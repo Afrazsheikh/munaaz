@@ -1,7 +1,48 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 import { Order } from '@/types/order';
 
-export interface IOrderDocument extends Omit<Order, 'id'>, Document {}
+export interface IOrderDocument extends Document {
+  id: string;
+  orderNumber: string;
+  createdAt: string;
+  customer: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  shippingAddress: any;
+  billingAddress: any;
+  items: any[];
+  subtotal: number;
+  discount: number;
+  shippingFee: number;
+  tax: number;
+  total: number;
+  currency: 'INR' | 'USD';
+  paymentMethod: string;
+  paymentStatus: string;
+  orderStatus: string;
+  cashfreeOrderId?: string;
+  cashfreePaymentId?: string;
+  paymentSessionId?: string;
+  refundStatus?: string;
+  refundDetails?: any[];
+  rtoDetails?: any;
+  cancellationReason?: string;
+  cancelledAt?: string;
+  shiprocketOrderId?: number | string;
+  shiprocketShipmentId?: number | string;
+  shiprocketAwb?: string;
+  shiprocketCourier?: string;
+  shiprocketStatus?: string;
+  shiprocketLabelUrl?: string;
+  shiprocketManifestUrl?: string;
+  trackingNumber?: string;
+  courierCarrier?: string;
+  trackingHistory?: any[];
+  adminNotes?: string;
+  estimatedDelivery: string;
+}
 
 const AddressSchema = new Schema({
   id: { type: String, default: '' },
@@ -35,6 +76,27 @@ const CartItemSchema = new Schema({
   unitPriceUSD: { type: Number, required: true }
 }, { _id: false });
 
+const RefundDetailSchema = new Schema({
+  refundId: { type: String, required: true },
+  cfRefundId: { type: String },
+  amount: { type: Number, required: true },
+  reason: { type: String },
+  status: { type: String, required: true, enum: ['pending', 'success', 'failed'], default: 'pending' },
+  createdAt: { type: String, required: true },
+  speed: { type: String, enum: ['STANDARD', 'INSTANT'], default: 'STANDARD' },
+  arn: { type: String }
+}, { _id: false });
+
+const RtoDetailSchema = new Schema({
+  rtoReason: { type: String, required: true },
+  initiatedAt: { type: String, required: true },
+  completedAt: { type: String },
+  returnTrackingNumber: { type: String },
+  returnCourier: { type: String },
+  refundProcessed: { type: Boolean, default: false },
+  refundAmount: { type: Number }
+}, { _id: false });
+
 const OrderSchema: Schema = new Schema({
   id: { type: String, required: true, unique: true },
   orderNumber: { type: String, required: true, unique: true, index: true },
@@ -54,8 +116,23 @@ const OrderSchema: Schema = new Schema({
   total: { type: Number, required: true },
   currency: { type: String, required: true, enum: ['INR', 'USD'] },
   paymentMethod: { type: String, required: true },
-  paymentStatus: { type: String, required: true, enum: ['paid', 'pending', 'failed'] },
-  orderStatus: { type: String, required: true, enum: ['placed', 'processing', 'shipped', 'delivered', 'cancelled'] },
+  paymentStatus: { type: String, required: true, enum: ['paid', 'pending', 'failed', 'refunded', 'partially_refunded'] },
+  orderStatus: { type: String, required: true, enum: ['placed', 'processing', 'shipped', 'delivered', 'cancelled', 'rto_initiated', 'rto_delivered'] },
+  cashfreeOrderId: { type: String, index: true },
+  cashfreePaymentId: { type: String },
+  paymentSessionId: { type: String },
+  refundStatus: { type: String, enum: ['none', 'pending', 'success', 'failed'], default: 'none' },
+  refundDetails: [RefundDetailSchema],
+  rtoDetails: RtoDetailSchema,
+  cancellationReason: { type: String },
+  cancelledAt: { type: String },
+  shiprocketOrderId: { type: Schema.Types.Mixed },
+  shiprocketShipmentId: { type: Schema.Types.Mixed },
+  shiprocketAwb: { type: String, index: true },
+  shiprocketCourier: { type: String },
+  shiprocketStatus: { type: String },
+  shiprocketLabelUrl: { type: String },
+  shiprocketManifestUrl: { type: String },
   trackingNumber: { type: String, index: true },
   courierCarrier: { type: String },
   trackingHistory: [TrackingEventSchema],

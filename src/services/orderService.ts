@@ -266,6 +266,193 @@ export const orderService = {
     return updatedOrder;
   },
 
+  async createCashfreeSession(orderPayload: any): Promise<{
+    success: boolean;
+    orderId?: string;
+    orderNumber?: string;
+    cashfreeOrderId?: string;
+    paymentSessionId?: string;
+    mockMode?: boolean;
+    message?: string;
+    data?: Order;
+  }> {
+    try {
+      const res = await fetch('/api/cashfree/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload)
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const local = getLocalOrders();
+        saveLocalOrders([data.data, ...local]);
+      }
+      return data;
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Failed to initialize payment' };
+    }
+  },
+
+  async verifyCashfreePayment(orderId: string, cfPaymentId?: string): Promise<{
+    success: boolean;
+    data?: Order;
+    message?: string;
+  }> {
+    try {
+      const res = await fetch('/api/cashfree/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, cfPaymentId })
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const orders = getLocalOrders();
+        const index = orders.findIndex((o) => o.id === orderId || o.orderNumber === orderId);
+        if (index !== -1) {
+          orders[index] = data.data;
+          saveLocalOrders(orders);
+        }
+      }
+      return data;
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Payment verification failed' };
+    }
+  },
+
+  async cancelOrder(
+    orderId: string,
+    reason: string,
+    initiatedBy: 'customer' | 'admin' = 'customer'
+  ): Promise<{ success: boolean; data?: Order; message?: string }> {
+    try {
+      const res = await fetch(`/api/orders/${orderId}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason, initiatedBy })
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const orders = getLocalOrders();
+        const index = orders.findIndex((o) => o.id === orderId || o.orderNumber === orderId);
+        if (index !== -1) {
+          orders[index] = data.data;
+          saveLocalOrders(orders);
+        }
+      }
+      return data;
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Failed to cancel order' };
+    }
+  },
+
+  async processRto(
+    orderId: string,
+    payload: {
+      action: 'initiate' | 'delivered';
+      rtoReason?: string;
+      returnTrackingNumber?: string;
+      returnCourier?: string;
+      processRefund?: boolean;
+      deductionAmount?: number;
+      refundSpeed?: 'STANDARD' | 'INSTANT';
+    }
+  ): Promise<{ success: boolean; data?: Order; message?: string }> {
+    try {
+      const res = await fetch(`/api/orders/${orderId}/rto`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const orders = getLocalOrders();
+        const index = orders.findIndex((o) => o.id === orderId || o.orderNumber === orderId);
+        if (index !== -1) {
+          orders[index] = data.data;
+          saveLocalOrders(orders);
+        }
+      }
+      return data;
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Failed to update RTO status' };
+    }
+  },
+
+  async createShiprocketShipment(
+    orderId: string,
+    dimensions?: { length?: number; breadth?: number; height?: number; weight?: number }
+  ): Promise<{ success: boolean; data?: any; message?: string }> {
+    try {
+      const res = await fetch('/api/shiprocket/create-shipment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, ...dimensions })
+      });
+      const data = await res.json();
+      if (data.success && data.data?.order) {
+        const orders = getLocalOrders();
+        const index = orders.findIndex((o) => o.id === orderId || o.orderNumber === orderId);
+        if (index !== -1) {
+          orders[index] = data.data.order;
+          saveLocalOrders(orders);
+        }
+      }
+      return data;
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Failed to manifest shipment with Shiprocket' };
+    }
+  },
+
+  async trackShiprocketShipment(
+    target: { orderId?: string; awb?: string }
+  ): Promise<{ success: boolean; data?: any; message?: string }> {
+    try {
+      const params = new URLSearchParams();
+      if (target.orderId) params.append('orderId', target.orderId);
+      if (target.awb) params.append('awb', target.awb);
+
+      const res = await fetch(`/api/shiprocket/track?${params.toString()}`);
+      const data = await res.json();
+      if (data.success && data.data?.order) {
+        const orders = getLocalOrders();
+        const index = orders.findIndex((o) => o.id === data.data.order.id || o.orderNumber === data.data.order.orderNumber);
+        if (index !== -1) {
+          orders[index] = data.data.order;
+          saveLocalOrders(orders);
+        }
+      }
+      return data;
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Failed to fetch Shiprocket tracking' };
+    }
+  },
+
+  async getShiprocketLabel(orderId: string): Promise<{ success: boolean; labelUrl?: string; message?: string }> {
+    try {
+      const res = await fetch('/api/shiprocket/label', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId })
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Failed to generate shipping label' };
+    }
+  },
+
+  async scheduleShiprocketPickup(orderId: string, pickupDate?: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const res = await fetch('/api/shiprocket/pickup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, pickupDate })
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Failed to schedule pickup' };
+    }
+  },
+
   async deleteOrder(orderId: string): Promise<boolean> {
     try {
       await fetch(`/api/orders/${orderId}`, { method: 'DELETE' });

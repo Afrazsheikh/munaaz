@@ -7,7 +7,8 @@ import { useCart } from '@/context/CartContext';
 import { useRegion } from '@/context/RegionContext';
 import { orderService } from '@/services/orderService';
 import { Order, PaymentMethodType } from '@/types/order';
-import { CheckCircle2, ShieldCheck, Lock, Truck, CreditCard, ArrowRight } from 'lucide-react';
+import { openCashfreeModal } from '@/lib/cashfreeClient';
+import { CheckCircle2, ShieldCheck, Lock, Truck, CreditCard, ArrowRight, X, AlertCircle } from 'lucide-react';
 
 export default function CheckoutPage() {
   const { items, subtotalINR, subtotalUSD, discountINR, discountUSD, clearCart } = useCart();
@@ -24,11 +25,20 @@ export default function CheckoutPage() {
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [postalCode, setPostalCode] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>(region === 'IN' ? 'upi' : 'stripe');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>(region === 'IN' ? 'cashfree' : 'stripe');
 
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Cashfree Mock Simulation Dialog state
+  const [mockModalOpen, setMockModalOpen] = useState(false);
+  const [pendingCfOrder, setPendingCfOrder] = useState<{
+    orderId: string;
+    orderNumber: string;
+    cashfreeOrderId: string;
+    total: number;
+  } | null>(null);
 
   // Calculations
   const shippingFeeINR = config.flatShippingRate;
@@ -49,48 +59,139 @@ export default function CheckoutPage() {
     setStep(2);
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     setIsSubmitting(true);
-    setTimeout(async () => {
-      const newOrder = await orderService.createOrder({
-        customer: { name: fullName, email, phone },
-        shippingAddress: {
-          id: `addr-${Date.now()}`,
-          fullName,
-          street,
-          apartment,
-          city,
-          state,
-          postalCode,
-          country: region,
-          phone
-        },
-        billingAddress: {
-          id: `addr-${Date.now()}`,
-          fullName,
-          street,
-          apartment,
-          city,
-          state,
-          postalCode,
-          country: region,
-          phone
-        },
-        items,
-        subtotal: region === 'IN' ? subtotalINR : subtotalUSD,
-        discount: region === 'IN' ? discountINR : discountUSD,
-        shippingFee: region === 'IN' ? shippingFeeINR : shippingFeeUSD,
-        tax: region === 'IN' ? taxINR : taxUSD,
-        total: region === 'IN' ? totalINR : totalUSD,
-        currency: config.currency as any,
-        paymentMethod
-      });
+    setErrorMsg('');
 
+    const orderPayload = {
+      customer: { name: fullName, email, phone },
+      shippingAddress: {
+        id: `addr-${Date.now()}`,
+        fullName,
+        street,
+        apartment,
+        city,
+        state,
+        postalCode,
+        country: region,
+        phone
+      },
+      billingAddress: {
+        id: `addr-${Date.now()}`,
+        fullName,
+        street,
+        apartment,
+        city,
+        state,
+        postalCode,
+        country: region,
+        phone
+      },
+      items,
+      subtotal: region === 'IN' ? subtotalINR : subtotalUSD,
+      discount: region === 'IN' ? discountINR : discountUSD,
+      shippingFee: region === 'IN' ? shippingFeeINR : shippingFeeUSD,
+      tax: region === 'IN' ? taxINR : taxUSD,
+      total: region === 'IN' ? totalINR : totalUSD,
+      currency: config.currency,
+      paymentMethod
+    };
+
+    // 1. CASHFREE PAYMENT GATEWAY FLOW
+    if (paymentMethod === 'cashfree') {
+      try {
+        const sessionRes = await orderService.createCashfreeSession(orderPayload);
+
+        if (!sessionRes.success || !sessionRes.paymentSessionId) {
+          setErrorMsg(sessionRes.message || 'Failed to initialize Cashfree payment. Please try again.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        // If mock mode (awaiting keys in .env.local), launch testing simulation modal
+        if (sessionRes.mockMode) {
+          setPendingCfOrder({
+            orderId: sessionRes.orderId || '',
+            orderNumber: sessionRes.orderNumber || '',
+            cashfreeOrderId: sessionRes.cashfreeOrderId || '',
+            total: region === 'IN' ? totalINR : totalUSD
+          });
+          setMockModalOpen(true);
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Real mode: launch official Cashfree JS SDK modal
+        const result = await openCashfreeModal(
+          sessionRes.paymentSessionId,
+          (process.env.NEXT_PUBLIC_CASHFREE_ENV as any) || 'sandbox'
+        );
+
+        if (result.status === 'FAILED') {
+          setErrorMsg(result.error || 'Payment was unsuccessful or cancelled. Please retry.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Verify payment on server
+        const verifyRes = await orderService.verifyCashfreePayment(
+          sessionRes.cashfreeOrderId || sessionRes.orderId || '',
+          result.paymentId
+        );
+
+        if (verifyRes.success && verifyRes.data) {
+          setCreatedOrder(verifyRes.data);
+          clearCart();
+          setStep(4);
+        } else {
+          setErrorMsg(verifyRes.message || 'Payment verification failed. Please contact support.');
+        }
+      } catch (err: any) {
+        console.error('Cashfree checkout error:', err);
+        setErrorMsg(err.message || 'Error communicating with Cashfree Gateway.');
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    // 2. COD & OTHER GATEWAYS FLOW
+    try {
+      const newOrder = await orderService.createOrder({
+        ...orderPayload,
+        currency: config.currency as any
+      });
       setCreatedOrder(newOrder);
       clearCart();
-      setIsSubmitting(false);
       setStep(4);
-    }, 1200);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to place order.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSimulatePayment = async (status: 'SUCCESS' | 'FAIL') => {
+    if (!pendingCfOrder) return;
+    setIsSubmitting(true);
+    setMockModalOpen(false);
+
+    if (status === 'SUCCESS') {
+      const verifyRes = await orderService.verifyCashfreePayment(
+        pendingCfOrder.cashfreeOrderId || pendingCfOrder.orderId,
+        `cf_sim_${Date.now()}`
+      );
+      if (verifyRes.success && verifyRes.data) {
+        setCreatedOrder(verifyRes.data);
+        clearCart();
+        setStep(4);
+      } else {
+        setErrorMsg(verifyRes.message || 'Payment simulation verification failed.');
+      }
+    } else {
+      setErrorMsg('Payment simulation was rejected or cancelled.');
+    }
+    setIsSubmitting(false);
   };
 
   // STEP 4: ORDER CONFIRMED VIEW
@@ -138,6 +239,20 @@ export default function CheckoutPage() {
             <span>TOTAL PAID</span>
             <span>{config.symbol}{createdOrder.total.toLocaleString()} {createdOrder.currency}</span>
           </div>
+
+          {createdOrder.paymentMethod === 'cashfree' && (
+            <div className="p-3 bg-[#A85F43]/10 border border-[#A85F43]/30 text-xs text-[#35251E] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div>
+                <span className="font-semibold block">Paid via Cashfree Payment Gateway</span>
+                <span className="text-[11px] text-[#806B5D]">
+                  Ref: {createdOrder.cashfreePaymentId || createdOrder.cashfreeOrderId || 'Verified'}
+                </span>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-[#A85F43] text-white px-2 py-0.5 rounded">
+                {createdOrder.paymentStatus.toUpperCase()}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -308,7 +423,28 @@ export default function CheckoutPage() {
               <div className="space-y-3">
                 {region === 'IN' ? (
                   <>
-                    <label className="flex items-center justify-between p-4 border border-[#DDCBB7] cursor-pointer hover:border-[#A85F43]">
+                    <label className={`flex items-center justify-between p-4 border cursor-pointer transition-all ${paymentMethod === 'cashfree' ? 'border-[#A85F43] bg-[#A85F43]/5' : 'border-[#DDCBB7] hover:border-[#A85F43]'}`}>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="radio"
+                          name="pm"
+                          checked={paymentMethod === 'cashfree'}
+                          onChange={() => setPaymentMethod('cashfree')}
+                          className="accent-[#A85F43]"
+                        />
+                        <div>
+                          <span className="font-semibold text-xs text-[#35251E] block">
+                            Cashfree Payments (UPI, Cards, NetBanking, Wallets)
+                          </span>
+                          <span className="text-[11px] text-[#806B5D] block">
+                            Instant secure checkout with Google Pay, PhonePe, Paytm, Cards & 50+ Banks
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-[#A85F43] bg-[#A85F43]/15 px-2 py-0.5 rounded uppercase">RECOMMENDED</span>
+                    </label>
+
+                    <label className={`flex items-center justify-between p-4 border cursor-pointer transition-all ${paymentMethod === 'upi' ? 'border-[#A85F43] bg-[#A85F43]/5' : 'border-[#DDCBB7] hover:border-[#A85F43]'}`}>
                       <div className="flex items-center gap-3">
                         <input
                           type="radio"
@@ -317,26 +453,12 @@ export default function CheckoutPage() {
                           onChange={() => setPaymentMethod('upi')}
                           className="accent-[#A85F43]"
                         />
-                        <span className="font-semibold text-xs text-[#35251E]">UPI (GPay / PhonePe / Paytm)</span>
+                        <span className="font-semibold text-xs text-[#35251E]">Direct UPI QR / ID</span>
                       </div>
-                      <span className="text-[10px] font-bold text-[#A85F43]">INSTANT</span>
+                      <span className="text-[10px] font-bold text-[#806B5D]">FAST</span>
                     </label>
 
-                    <label className="flex items-center justify-between p-4 border border-[#DDCBB7] cursor-pointer hover:border-[#A85F43]">
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="radio"
-                          name="pm"
-                          checked={paymentMethod === 'razorpay'}
-                          onChange={() => setPaymentMethod('razorpay')}
-                          className="accent-[#A85F43]"
-                        />
-                        <span className="font-semibold text-xs text-[#35251E]">Credit / Debit Cards (Razorpay)</span>
-                      </div>
-                      <span className="text-[10px] text-[#806B5D]">VISA / Mastercard</span>
-                    </label>
-
-                    <label className="flex items-center justify-between p-4 border border-[#DDCBB7] cursor-pointer hover:border-[#A85F43]">
+                    <label className={`flex items-center justify-between p-4 border cursor-pointer transition-all ${paymentMethod === 'cod' ? 'border-[#A85F43] bg-[#A85F43]/5' : 'border-[#DDCBB7] hover:border-[#A85F43]'}`}>
                       <div className="flex items-center gap-3">
                         <input
                           type="radio"
@@ -480,6 +602,67 @@ export default function CheckoutPage() {
         </div>
 
       </div>
+
+      {/* Cashfree Mock Sandbox Simulation Modal (Active when developer credentials are not yet configured) */}
+      {mockModalOpen && pendingCfOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-[#FFF9F1] border-2 border-[#A85F43] p-6 max-w-md w-full shadow-2xl relative">
+            <button
+              onClick={() => { setMockModalOpen(false); setIsSubmitting(false); }}
+              className="absolute top-4 right-4 text-[#806B5D] hover:text-[#35251E]"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-4 text-[#A85F43]">
+              <ShieldCheck className="w-6 h-6" />
+              <h3 className="font-serif text-lg font-bold text-[#35251E]">Cashfree PG Sandbox Simulation</h3>
+            </div>
+
+            <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs mb-4 rounded space-y-1">
+              <p className="font-semibold flex items-center gap-1">
+                <AlertCircle className="w-4 h-4 text-amber-600" />
+                <span>Operating in Development Sandbox Mode</span>
+              </p>
+              <p className="text-[11px] text-amber-700">
+                You can test both payment success and refund flows now. To connect to live Cashfree servers, add your <code>CASHFREE_APP_ID</code> and <code>CASHFREE_SECRET_KEY</code> in <code>.env.local</code>.
+              </p>
+            </div>
+
+            <div className="space-y-2 text-xs border-y border-[#DDCBB7] py-3 my-4">
+              <div className="flex justify-between">
+                <span className="text-[#806B5D]">Order Number:</span>
+                <span className="font-semibold text-[#35251E]">#{pendingCfOrder.orderNumber}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#806B5D]">Amount Due:</span>
+                <span className="font-bold text-[#35251E]">₹{pendingCfOrder.total.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#806B5D]">Gateway:</span>
+                <span className="font-medium text-[#A85F43]">Cashfree PG (Simulated)</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <button
+                type="button"
+                onClick={() => handleSimulatePayment('SUCCESS')}
+                className="w-full bg-[#A85F43] hover:bg-[#8A4A32] text-white text-xs font-semibold py-3 uppercase tracking-wider transition-colors shadow-sm"
+              >
+                Simulate Successful Payment (₹{pendingCfOrder.total.toLocaleString()})
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSimulatePayment('FAIL')}
+                className="w-full border border-[#DDCBB7] hover:bg-red-50 text-red-600 text-xs font-medium py-2.5 transition-colors"
+              >
+                Simulate Payment Failure / Drop
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
